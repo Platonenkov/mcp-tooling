@@ -1,10 +1,14 @@
 # CLAUDE.md — repo conventions for AI agents
 
-Shared tooling for our .NET MCP servers. Currently ships **`Mcp.ToolsDoc`**
-(`src/Mcp.ToolsDoc`) — a config-driven `dotnet tool` that generates a Markdown tool reference
-from `[McpServerToolType]` / `[McpServerTool]` / `[Description]` attributes (Roslyn,
-syntax-only) and a `--check` mode for CI. Consumed by the MCP repos via `dotnet-tools.json` +
-a per-repo `toolsdoc.json`.
+Shared tooling for our .NET MCP servers. Ships two `dotnet tool`s, consumed by the MCP repos
+via `.config/dotnet-tools.json`:
+- **`Mcp.ToolsDoc`** (`src/Mcp.ToolsDoc`, command `mcp-toolsdoc`) — config-driven (`toolsdoc.json`)
+  generator of a Markdown tool reference from `[McpServerToolType]` / `[McpServerTool]` /
+  `[Description]` attributes (Roslyn, syntax-only), with a `--check` CI mode.
+- **`Mcp.I18nCheck`** (`src/Mcp.I18nCheck`, command `mcp-i18ncheck`) — config-less bilingual-docs
+  gate (EN canonical + RU counterpart; `.i18nignore` / `.i18npairs`). This is the **canonical**
+  implementation of our docs-i18n gate; consuming repos call it via `dotnet tool` rather than a
+  copied `check-translations.sh`.
 
 ## Documentation — bilingual, enforced by CI
 

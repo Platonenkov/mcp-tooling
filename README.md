@@ -72,10 +72,43 @@ jobs:
 The generated `TOOLS.generated.md` is English-only; if your repo enforces a bilingual-docs
 gate, list it in that gate's ignore file.
 
+## `Mcp.I18nCheck` — bilingual-docs gate
+
+A config-less **.NET tool** that enforces our bilingual-docs convention in CI: English is
+canonical; every English doc must have its Russian counterpart and the Russian file must be
+non-stub (≥ 200 bytes).
+
+- `docs/<path>.md` ↔ `docs/ru/<path>.md` (mirror subtree).
+- `X.md` ↔ `X.ru.md` (suffix) for the repo root, `plugins/*`, `examples/**`, `servers/*`, `infra/`.
+
+Exemptions: a repo-root **`.i18nignore`** (English-only / generated / agent files, one
+repo-relative path per line). Pairs outside the conventional locations: **`.i18npairs`**
+(`en:ru` per line).
+
+```bash
+dotnet tool install Mcp.I18nCheck
+dotnet tool run mcp-i18ncheck            # exit non-zero if any pair is missing/stub
+```
+
+```yaml
+# .github/workflows/docs-i18n.yml
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  bilingual-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet tool restore
+      - run: dotnet tool run mcp-i18ncheck
+```
+
 ## Releasing
 
-`Mcp.ToolsDoc` version lives in `src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj` (`<Version>`). Pushing a
-`v X.Y.Z` tag publishes that version to nuget.org via `.github/workflows/publish.yml`
-(requires the repo secret `NUGET_API_KEY`).
+Each tool's version lives in its csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`). Pushing a
+`v X.Y.Z` tag packs **both** and publishes them to nuget.org via
+`.github/workflows/publish.yml` (`--skip-duplicate`, so unchanged versions are no-ops; requires
+the repo secret `NUGET_API_KEY`). Bump the relevant csproj `<Version>` before tagging.
 
 License: MIT.

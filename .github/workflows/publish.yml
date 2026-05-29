@@ -23,7 +23,9 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Pack
-        run: dotnet pack src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj -c Release -o ./nupkg
+        run: |
+          dotnet pack src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj -c Release -o ./nupkg
+          dotnet pack src/Mcp.I18nCheck/Mcp.I18nCheck.csproj -c Release -o ./nupkg
 
       - name: Push to nuget.org
         run: >

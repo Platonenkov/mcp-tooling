@@ -72,10 +72,42 @@ jobs:
 Сгенерированный `TOOLS.generated.md` — только на английском; если в репо есть гейт
 двуязычности, добавьте этот файл в его ignore-список.
 
+## `Mcp.I18nCheck` — гейт двуязычности
+
+Config-less **.NET-тул**, который в CI обеспечивает нашу конвенцию двуязычности: английский —
+каноничный; у каждого английского дока должна быть русская пара, и русский файл не должен быть
+заглушкой (≥ 200 байт).
+
+- `docs/<path>.md` ↔ `docs/ru/<path>.md` (зеркало).
+- `X.md` ↔ `X.ru.md` (суффикс) для корня репо, `plugins/*`, `examples/**`, `servers/*`, `infra/`.
+
+Исключения — корневой **`.i18nignore`** (EN-only / генерируемые / агент-файлы, по пути на
+строку). Пары вне стандартных мест — **`.i18npairs`** (`en:ru` на строку).
+
+```bash
+dotnet tool install Mcp.I18nCheck
+dotnet tool run mcp-i18ncheck            # ненулевой код выхода при отсутствии пары/заглушке
+```
+
+```yaml
+# .github/workflows/docs-i18n.yml
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  bilingual-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet tool restore
+      - run: dotnet tool run mcp-i18ncheck
+```
+
 ## Релизы
 
-Версия `Mcp.ToolsDoc` живёт в `src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj` (`<Version>`). Пуш тега
-`v X.Y.Z` публикует эту версию на nuget.org через `.github/workflows/publish.yml`
-(требуется секрет репозитория `NUGET_API_KEY`).
+Версия каждого тула живёт в его csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`). Пуш тега
+`v X.Y.Z` пакует **оба** и публикует на nuget.org через `.github/workflows/publish.yml`
+(`--skip-duplicate`, поэтому неизменённые версии — no-op; требуется секрет `NUGET_API_KEY`).
+Перед тегом — бампнуть нужный csproj `<Version>`.
 
 Лицензия: MIT.

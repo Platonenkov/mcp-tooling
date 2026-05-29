@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Mcp.I18nCheck</RootNamespace>
+    <AssemblyName>mcp-i18ncheck</AssemblyName>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mcp-i18ncheck</ToolCommandName>
+    <PackageId>Mcp.I18nCheck</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>StaticBit</Authors>
+    <Description>Bilingual-docs CI gate for MCP repos: every English doc must have its Russian counterpart (docs/&lt;path&gt;.md ↔ docs/ru/&lt;path&gt;.md mirror; X.md ↔ X.ru.md suffix elsewhere), and Russian files must be non-stub. Exemptions via .i18nignore; extra pairs via .i18npairs.</Description>
+    <PackageTags>mcp;docs;i18n;translations;ci;dotnet-tool</PackageTags>
+    <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
