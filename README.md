@@ -62,7 +62,7 @@ jobs:
   toolsdoc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: '10.0.x' }
       - run: dotnet tool restore
@@ -97,7 +97,7 @@ jobs:
   bilingual-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: '10.0.x' }
       - run: dotnet tool restore
