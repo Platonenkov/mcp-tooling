@@ -18,11 +18,11 @@ via `.config/dotnet-tools.json`:
 - Under `docs/`: `docs/<path>.md` (EN) + `docs/ru/<path>.md` (RU).
 
 When you add or change a doc, **update BOTH languages** — same content; translate only prose,
-keep code/commands/paths/links byte-identical. The gate `scripts/check-translations.sh`
-(workflow `.github/workflows/docs-i18n.yml`) fails CI if an English doc lacks its Russian
-counterpart, or a Russian file is a stub (< 200 bytes). English-only / agent files →
-`.i18nignore`; odd-location pairs → `.i18npairs`. This gate is the same one the consuming MCP
-repos use (this repo is its canonical source — copy `scripts/check-translations.sh` verbatim).
+keep code/commands/paths/links byte-identical. The gate is the `Mcp.I18nCheck` tool itself
+(workflow `.github/workflows/docs-i18n.yml` runs it from local build here — no self-dependency
+on the published package). It fails CI if an English doc lacks its Russian counterpart, or a
+Russian file is a stub (< 200 bytes). English-only / agent files → `.i18nignore`; odd-location
+pairs → `.i18npairs`. Consuming MCP repos run the published tool via `dotnet tool`.
 
 ## The tool — `Mcp.ToolsDoc`
 

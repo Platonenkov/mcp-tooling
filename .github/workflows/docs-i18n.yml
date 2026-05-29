@@ -1,8 +1,7 @@
 name: docs-i18n
 
-# Gate: every English doc in scripts/check-translations.sh's registry must have its
-# Russian counterpart on disk. English is canonical; Russian sibling lives at *.ru.md
-# (root) or under docs/ru/.
+# Self-check: this repo IS the source of Mcp.I18nCheck, so run it from local build
+# (no dependency on the published package).
 
 on:
   push:
@@ -12,9 +11,10 @@ on:
 
 jobs:
   bilingual-docs:
-    name: every English doc has its Russian counterpart
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: check-translations
-        run: bash scripts/check-translations.sh
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet run --project src/Mcp.I18nCheck/Mcp.I18nCheck.csproj -c Release
