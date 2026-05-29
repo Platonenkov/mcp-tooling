@@ -7,6 +7,12 @@ name: docker-build-push (reusable)
 # :latest. Set use_gh_packages_secret when the Dockerfile restores from the
 # private GitHub Packages NuGet feed (the token is mounted as a build-secret,
 # never an arg, so it stays out of image history).
+#
+# The resolved version is also passed as the APP_VERSION build-arg so each
+# Dockerfile can stamp it into the assembly (-p:InformationalVersion, which
+# accepts arbitrary strings like "main"/"latest" from a manual dispatch) and
+# surface it at runtime (e.g. /healthz). Dockerfiles that don't declare
+# `ARG APP_VERSION` just ignore it (harmless buildx warning).
 
 on:
   workflow_call:
@@ -77,6 +83,10 @@ jobs:
           file: ${{ matrix.image.dockerfile }}
           push: true
           platforms: ${{ inputs.platforms }}
+          # Surfaced at runtime via the server's /healthz (or /version) endpoint.
+          # Dockerfiles that don't declare `ARG APP_VERSION` simply ignore it.
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
           secrets: ${{ inputs.use_gh_packages_secret && format('github_token={0}', secrets.gh_packages_token) || '' }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}
