@@ -1,0 +1,107 @@
+name: deploy-vps (reusable)
+
+# Reusable "ship a GHCR image to a VPS" deploy for MCP repositories.
+# No registry credentials live on the VPS: the runner pulls the image,
+# `docker save` streams it as a tarball over an SSH pipe into a forced-command
+# deploy.sh on the host, and the tag travels as the SSH command (validated
+# again server-side). The runner then smoke-tests the public healthz URL.
+#
+# Host prerequisites (per service), see the caller repo's deploy/deploy.sh:
+#   ~/.ssh/authorized_keys:
+#     command="/opt/<name>/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty <ci deploy pubkey>
+# Required caller secrets: deploy_ssh_key, deploy_host, deploy_user
+# (deploy_known_hosts optional — falls back to ssh-keyscan).
+
+on:
+  workflow_call:
+    inputs:
+      image_suffix:
+        description: 'Image path under ghcr.io/<owner>/, e.g. xrplmeta-mcp.'
+        required: true
+        type: string
+      tag:
+        description: 'Image tag to deploy (semver, optionally v-prefixed, or latest).'
+        required: true
+        type: string
+      healthz_url:
+        description: 'Public health endpoint expected to return 200 after deploy.'
+        required: true
+        type: string
+      platform:
+        description: 'Image platform to pull/ship (the VPS arch).'
+        required: false
+        type: string
+        default: 'linux/amd64'
+    secrets:
+      deploy_ssh_key:
+        required: true
+      deploy_host:
+        required: true
+      deploy_user:
+        required: true
+      deploy_known_hosts:
+        required: false
+
+concurrency:
+  group: deploy-vps-${{ inputs.image_suffix }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: tar-push deploy to VPS
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Validate tag
+        run: |
+          if ! [[ "${{ inputs.tag }}" =~ ^(v?[0-9]+\.[0-9]+\.[0-9]+|latest)$ ]]; then
+            echo "::error::tag '${{ inputs.tag }}' must be semver (optionally v-prefixed) or 'latest'"
+            exit 1
+          fi
+
+      - name: Compose image ref
+        id: img
+        run: |
+          owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
+          tag="${{ inputs.tag }}"
+          tag="${tag#v}"
+          echo "ref=ghcr.io/${owner_lc}/${{ inputs.image_suffix }}:${tag}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull image (${{ inputs.platform }})
+        run: docker pull --platform ${{ inputs.platform }} "${{ steps.img.outputs.ref }}"
+
+      - name: Prepare SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.deploy_ssh_key }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          if [ -n "${{ secrets.deploy_known_hosts }}" ]; then
+            printf '%s\n' "${{ secrets.deploy_known_hosts }}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${{ secrets.deploy_host }}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Ship + deploy
+        run: |
+          docker save "${{ steps.img.outputs.ref }}" \
+            | ssh -i ~/.ssh/id_deploy \
+                  -o BatchMode=yes \
+                  "${{ secrets.deploy_user }}@${{ secrets.deploy_host }}" \
+                  "${{ steps.img.outputs.tag }}"
+
+      - name: Public smoke (healthz)
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' "${{ inputs.healthz_url }}" || true)
+          echo "healthz HTTP=$code"
+          [ "$code" = "200" ] || { echo "::error::healthz not 200 after deploy"; exit 1; }

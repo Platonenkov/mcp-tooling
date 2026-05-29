@@ -1,7 +1,11 @@
 # CLAUDE.md — repo conventions for AI agents
 
-Shared tooling for our .NET MCP servers. Ships two `dotnet tool`s, consumed by the MCP repos
-via `.config/dotnet-tools.json`:
+Shared tooling for our .NET MCP servers. **This repo is public** (it hosts reusable workflows
+that repos under two different GitHub owners must call, which GitHub only allows from a public
+host). Keep everything here repo-agnostic — no internal hostnames, server paths, or fleet
+specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Server/Tools`,
+`my-mcp.example.com`). It ships two `dotnet tool`s, consumed by the MCP repos via
+`.config/dotnet-tools.json`:
 - **`Mcp.ToolsDoc`** (`src/Mcp.ToolsDoc`, command `mcp-toolsdoc`) — config-driven (`toolsdoc.json`)
   generator of a Markdown tool reference from `[McpServerToolType]` / `[McpServerTool]` /
   `[Description]` attributes (Roslyn, syntax-only), with a `--check` CI mode.
@@ -9,6 +13,13 @@ via `.config/dotnet-tools.json`:
   gate (EN canonical + RU counterpart; `.i18nignore` / `.i18npairs`). This is the **canonical**
   implementation of our docs-i18n gate; consuming repos call it via `dotnet tool` rather than a
   copied `check-translations.sh`.
+
+It also hosts two **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
+consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
+- **`docker-build-push.yml`** — build + push multi-arch ghcr.io images from a JSON image matrix
+  (optional `github_token` build-secret for private GH Packages restore).
+- **`deploy-vps.yml`** — ship a published image to a VPS over an SSH pipe into a forced-command
+  `deploy.sh` (no registry login on the host), then smoke-test a healthz URL.
 
 ## Documentation — bilingual, enforced by CI
 

@@ -27,10 +27,10 @@ dotnet tool install Mcp.ToolsDoc
   // One section per MCP server. toolsDir is repo-relative.
   "servers": [
     {
-      "id": "telegram-bot",
-      "displayName": "telegram-bot",
-      "toolsDir": "servers/telegram-bot/src/TelegramMCP/Tools",
-      "blurb": "Cloud bot-API MCP server."
+      "id": "my-mcp",
+      "displayName": "my-mcp",
+      "toolsDir": "src/MyMcp.Server/Tools",
+      "blurb": "Example MCP server."
     }
   ],
   "generatedOutput": "docs/TOOLS.generated.md",
@@ -103,6 +103,85 @@ jobs:
       - run: dotnet tool restore
       - run: dotnet tool run mcp-i18ncheck
 ```
+
+## Reusable CI/CD workflows
+
+Two [reusable GitHub Actions workflows](https://docs.github.com/actions/using-workflows/reusing-workflows)
+let every consuming repo share one definition of how images are built, published, and deployed —
+callers stay thin and never drift apart. They live under `.github/workflows/` here and are
+referenced with `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`.
+
+### `docker-build-push.yml` — build + push ghcr.io images
+
+Builds one or more multi-arch images from a JSON image matrix and pushes each as
+`ghcr.io/<owner-lowercase>/<image_suffix>` with `:<version>` and `:latest`.
+
+```yaml
+# .github/workflows/docker.yml in the consuming repo
+on:
+  push: { tags: ['v*.*.*'] }
+  workflow_dispatch:
+    inputs:
+      version: { description: 'Version without leading v', required: true, type: string }
+jobs:
+  build-push:
+    permissions: { contents: read, packages: write }
+    uses: <owner>/mcp-tooling/.github/workflows/docker-build-push.yml@main
+    with:
+      version: ${{ inputs.version != '' && inputs.version || github.ref_name }}
+      images: |
+        [
+          { "name": "my-mcp", "image_suffix": "my-mcp",
+            "dockerfile": "./Dockerfile", "context": ".", "cache_scope": "my-mcp" }
+        ]
+      # use_gh_packages_secret: true   # when the Dockerfile restores a private GH Packages feed
+    # secrets:
+    #   gh_packages_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+| input | meaning |
+|-------|---------|
+| `version` | image tag; a leading `v` is stripped; `:latest` is also pushed |
+| `images` | JSON array of `{name, image_suffix, dockerfile, context, cache_scope}` (one entry per image) |
+| `platforms` | buildx platforms (default `linux/amd64,linux/arm64`) |
+| `use_gh_packages_secret` | mount `github_token` as a build-secret for private NuGet restore |
+
+### `deploy-vps.yml` — ship an image to a VPS over SSH
+
+Ships a published image to a host **without any registry login on the host**: the runner pulls
+the image, `docker save | ssh` streams the tarball into a forced-command `deploy.sh`, the tag
+arrives as the SSH command (re-validated server-side), then the runner smoke-tests a healthz URL.
+
+```yaml
+# .github/workflows/deploy.yml in the consuming repo
+on:
+  workflow_dispatch:
+    inputs:
+      tag: { description: 'Image tag (semver or latest)', required: true, type: string, default: latest }
+jobs:
+  deploy:
+    uses: <owner>/mcp-tooling/.github/workflows/deploy-vps.yml@main
+    with:
+      image_suffix: my-mcp
+      tag: ${{ inputs.tag }}
+      healthz_url: https://my-mcp.example.com/healthz
+    secrets:
+      deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
+      deploy_host: ${{ secrets.DEPLOY_HOST }}
+      deploy_user: ${{ secrets.DEPLOY_USER }}
+      deploy_known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+```
+
+Host prerequisite (per service): a CI deploy key locked to the forced command in the host's
+`~/.ssh/authorized_keys`, so the key can only run the deploy script and nothing else:
+
+```
+command="/opt/<name>/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... ci-deploy
+```
+
+`deploy.sh` validates the tag, `docker load`s the piped tarball, pins it in the compose `.env`,
+recreates the container, and waits for the healthcheck. A reference script is kept in each
+consuming repo under `deploy/deploy.sh`.
 
 ## Releasing
 

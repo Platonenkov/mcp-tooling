@@ -1,0 +1,85 @@
+name: docker-build-push (reusable)
+
+# Reusable build+push of ghcr.io images for MCP repositories.
+# Callers pass a JSON array of images (so a single repo can publish several,
+# e.g. a bot server + a user server) and the resolved version tag. Each image
+# is pushed as ghcr.io/<owner-lowercase>/<image_suffix> with :<version> and
+# :latest. Set use_gh_packages_secret when the Dockerfile restores from the
+# private GitHub Packages NuGet feed (the token is mounted as a build-secret,
+# never an arg, so it stays out of image history).
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Image tag (leading v is stripped). :latest is also pushed.'
+        required: true
+        type: string
+      images:
+        description: 'JSON array of {name, image_suffix, dockerfile, context, cache_scope}'
+        required: true
+        type: string
+      platforms:
+        description: 'Comma-separated buildx platforms.'
+        required: false
+        type: string
+        default: 'linux/amd64,linux/arm64'
+      use_gh_packages_secret:
+        description: 'Mount github_token as a build-secret for private GH Packages restore.'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      gh_packages_token:
+        description: 'Token for the GitHub Packages NuGet feed; required when use_gh_packages_secret is true.'
+        required: false
+
+jobs:
+  build-push:
+    name: build + push ${{ matrix.image.name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(inputs.images) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ghcr.io rejects uppercase letters in the image path, but
+      # github.repository_owner preserves casing (e.g. "StaticBit-io"), so
+      # normalize it. Strip any leading v from the version here too.
+      - name: Compose image ref + version
+        id: meta
+        run: |
+          owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
+          ver="${{ inputs.version }}"
+          ver="${ver#v}"
+          echo "image=ghcr.io/${owner_lc}/${{ matrix.image.image_suffix }}" >> "$GITHUB_OUTPUT"
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          platforms: ${{ inputs.platforms }}
+          secrets: ${{ inputs.use_gh_packages_secret && format('github_token={0}', secrets.gh_packages_token) || '' }}
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}
+            ${{ steps.meta.outputs.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.image.cache_scope }}
+          cache-to: type=gha,scope=${{ matrix.image.cache_scope }},mode=max
