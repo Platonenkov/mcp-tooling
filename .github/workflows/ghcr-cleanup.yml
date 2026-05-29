@@ -1,0 +1,64 @@
+name: ghcr-cleanup (reusable)
+
+# Reusable GHCR retention for MCP repositories. Callers pass their exact package
+# name(s) and (for org-owned packages) the account; this prunes old image
+# versions so the registry doesn't grow unbounded after every build.
+#
+# Multi-arch safety: our images are built multi-arch (linux/amd64,linux/arm64),
+# so each tag is a manifest list whose per-arch children show up as *untagged*
+# versions. snok/container-retention-policy >= 3.1.0 fetches the manifests of the
+# kept tags and excludes their child digests from deletion, so pruning untagged
+# versions never breaks a retained multi-arch image.
+#
+# Policy (see inputs): keep the N most-recent *tagged* versions, delete older
+# tagged versions and orphaned untagged versions past the cut-off. Deletion is
+# irreversible — flip dry_run on to preview.
+#
+# Token: the repo GITHUB_TOKEN is used. It must have admin on the target package
+# (packages created by this repo's own workflow do). Org-owned packages may need
+# the package's "Manage Actions access" to grant this repo admin.
+
+on:
+  workflow_call:
+    inputs:
+      account:
+        description: "'user' for personal accounts, or the organization name for org-owned packages."
+        required: true
+        type: string
+      image_names:
+        description: 'Space-separated exact package names to prune (e.g. "telegram-bot-mcp telegram-user-mcp").'
+        required: true
+        type: string
+      keep_n_most_recent:
+        description: 'Number of most-recent tagged versions to keep.'
+        required: false
+        type: number
+        default: 5
+      cut_off:
+        description: 'Only versions older than this are deletion candidates (humantime, e.g. 1d, 4w).'
+        required: false
+        type: string
+        default: '1d'
+      dry_run:
+        description: 'Preview deletions without deleting anything.'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  cleanup:
+    name: prune ghcr versions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: snok/container-retention-policy@v3.1.0
+        with:
+          account: ${{ inputs.account }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image-names: ${{ inputs.image_names }}
+          tag-selection: both
+          cut-off: ${{ inputs.cut_off }}
+          keep-n-most-recent: ${{ inputs.keep_n_most_recent }}
+          dry-run: ${{ inputs.dry_run }}
