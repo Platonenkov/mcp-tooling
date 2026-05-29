@@ -1,0 +1,13 @@
+{
+  "servers": [
+    {
+      "id": "my-mcp",
+      "displayName": "my-mcp",
+      "toolsDir": "src/MyMcp.Server/Tools",
+      "blurb": "Example MCP server."
+    }
+  ],
+  "generatedOutput": "docs/TOOLS.generated.md",
+  "markerFiles": ["README.md"],
+  "cheatsheet": "docs/TOOLS.md"
+}

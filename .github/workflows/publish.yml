@@ -1,0 +1,33 @@
+name: publish
+
+# Publishes Mcp.ToolsDoc to nuget.org when a v* tag is pushed.
+# The package version comes from the csproj <Version>; tag the repo to match, e.g.
+#   git tag v0.1.0 && git push origin v0.1.0
+# Requires the repo secret NUGET_API_KEY (a nuget.org API key with push rights).
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Pack
+        run: dotnet pack src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj -c Release -o ./nupkg
+
+      - name: Push to nuget.org
+        run: >
+          dotnet nuget push "./nupkg/*.nupkg"
+          --source https://api.nuget.org/v3/index.json
+          --api-key "${{ secrets.NUGET_API_KEY }}"
+          --skip-duplicate

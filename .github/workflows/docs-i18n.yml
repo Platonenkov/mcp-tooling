@@ -1,0 +1,20 @@
+name: docs-i18n
+
+# Gate: every English doc in scripts/check-translations.sh's registry must have its
+# Russian counterpart on disk. English is canonical; Russian sibling lives at *.ru.md
+# (root) or under docs/ru/.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  bilingual-docs:
+    name: every English doc has its Russian counterpart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: check-translations
+        run: bash scripts/check-translations.sh

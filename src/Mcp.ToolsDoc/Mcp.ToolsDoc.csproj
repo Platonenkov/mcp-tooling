@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Mcp.ToolsDoc</RootNamespace>
+    <AssemblyName>mcp-toolsdoc</AssemblyName>
+
+    <!-- Packaged as a .NET global/local tool. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mcp-toolsdoc</ToolCommandName>
+    <PackageId>Mcp.ToolsDoc</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>StaticBit</Authors>
+    <Description>Config-driven generator + CI sync-check for MCP tool reference docs. Reflects over [McpServerToolType]/[McpServerTool]/[Description] attributes (Roslyn, syntax-only) and renders a TOOLS.generated.md; --check fails CI on drift. Reusable across .NET ModelContextProtocol MCP servers.</Description>
+    <PackageTags>mcp;tools;docs;codegen;dotnet-tool;roslyn</PackageTags>
+    <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+  </ItemGroup>
+
+</Project>
