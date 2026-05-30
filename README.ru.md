@@ -161,6 +161,46 @@ jobs:
     uses: Platonenkov/mcp-tooling/.github/workflows/docs-links.yml@main
 ```
 
+## `Mcp.FleetLint` — кросс-репозиторный гейт консистентности
+
+**.NET-тул**, который проверяет каждый MCP-репо против канонического **fleet-инвентаря**
+([`fleet-lint.json`](fleet-lint.json) в корне этого репо). Ловит класс typo и config-drift'а,
+которые локальные тесты увидеть не могут — они переходят границу репо.
+
+Инвентарь — единственный source of truth для: OAuth scope каждого MCP, канонического
+`https://<host>/mcp` hostname, OAuth callback port'а его Claude Code плагина, и hostname
+authorization-сервера. Downstream-consumer'ы тянут этот файл в CI через
+`https://raw.githubusercontent.com/Platonenkov/mcp-tooling/main/fleet-lint.json`.
+
+Per-repo проверки (консистентность каждого MCP с инвентарём):
+- **Hostname consistency** — каждая строка `*.staticbit.io` в коммитнутых файлах должна
+  быть либо канонический host самого репо, либо AS host, либо другого MCP во флоте.
+  Всё остальное флагается с Levenshtein-based «did you mean?» подсказкой.
+- **callbackPort** — `oauth.callbackPort` в `.mcp.json` плагин-манифестах Claude Code
+  должен совпадать с каноническим портом для MCP этого репо.
+- **OAuth scope** — `OAuth.RequiredScope` в `appsettings*.json` должен совпадать с
+  инвентарём.
+- **AS hostname typos** — любая `auth.*` ссылка с edit distance ≤ 3 от канонического
+  AS hostname, но не равная ему точно, флагается. Третьесторонние `auth.example.com`
+  ссылки оставляются в покое.
+
+Репо НЕ в инвентаре (`mcp-tooling`, `mcp-auth`, или любой третьесторонний consumer)
+получают чистый pass: каждая проверка — no-op.
+
+```bash
+dotnet tool install Mcp.FleetLint
+dotnet tool run mcp-fleetlint            # write-mode: список issues + summary
+dotnet tool run mcp-fleetlint --check    # CI: ненулевой код выхода при любой issue
+```
+
+```yaml
+# .github/workflows/fleet-lint.yml — тонкий caller переиспользуемого workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  fleetlint:
+    uses: Platonenkov/mcp-tooling/.github/workflows/fleet-lint.yml@main
+```
+
 ## Переиспользуемые CI/CD workflow
 
 Два [переиспользуемых GitHub Actions workflow](https://docs.github.com/actions/using-workflows/reusing-workflows)

@@ -1,0 +1,34 @@
+{
+  "authorizationServer": "auth.mcp.staticbit.io",
+  "mcps": [
+    {
+      "id": "xrpl",
+      "scope": "xrpl",
+      "host": "xrpl-mcp.staticbit.io",
+      "callbackPort": 8128,
+      "repo": "StaticBit-io/staticbit-xrpl-mcp"
+    },
+    {
+      "id": "x-mcp",
+      "scope": "x-mcp",
+      "host": "x-mcp.staticbit.io",
+      "callbackPort": 8127,
+      "repo": "Platonenkov/x-mcp"
+    },
+    {
+      "id": "telegram-bot",
+      "scope": "telegram-bot",
+      "host": "telegram-mcp.staticbit.io",
+      "callbackPort": 8126,
+      "repo": "Platonenkov/telegram-mcp"
+    },
+    {
+      "id": "xrplmeta",
+      "scope": "xrplmeta",
+      "host": "xrpl-meta-mcp.staticbit.io",
+      "callbackPort": 8129,
+      "repo": "StaticBit-io/XrplMeta.Mcp"
+    }
+  ],
+  "allowedExtraHostnames": []
+}

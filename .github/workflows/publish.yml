@@ -1,10 +1,10 @@
 name: publish
 
-# Publishes all dotnet tools in this repo (Mcp.ToolsDoc, Mcp.I18nCheck, Mcp.LinkCheck)
-# to nuget.org when a v* tag is pushed. Per-tool version lives in its csproj <Version>;
-# unchanged packages pass through --skip-duplicate (idempotent re-runs are safe).
+# Publishes all dotnet tools in this repo (Mcp.ToolsDoc, Mcp.I18nCheck, Mcp.LinkCheck,
+# Mcp.FleetLint) to nuget.org when a v* tag is pushed. Per-tool version lives in its csproj
+# <Version>; unchanged packages pass through --skip-duplicate (idempotent re-runs are safe).
 # Tag the repo with v<X>.<Y>.<Z> to publish, e.g.:
-#   git tag v0.3.0 && git push origin v0.3.0
+#   git tag v0.4.0 && git push origin v0.4.0
 # Requires the repo secret NUGET_API_KEY (a nuget.org API key with push rights).
 
 on:
@@ -26,9 +26,10 @@ jobs:
 
       - name: Pack
         run: |
-          dotnet pack src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj  -c Release -o ./nupkg
+          dotnet pack src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj   -c Release -o ./nupkg
           dotnet pack src/Mcp.I18nCheck/Mcp.I18nCheck.csproj -c Release -o ./nupkg
           dotnet pack src/Mcp.LinkCheck/Mcp.LinkCheck.csproj -c Release -o ./nupkg
+          dotnet pack src/Mcp.FleetLint/Mcp.FleetLint.csproj -c Release -o ./nupkg
 
       - name: Push to nuget.org
         run: >
