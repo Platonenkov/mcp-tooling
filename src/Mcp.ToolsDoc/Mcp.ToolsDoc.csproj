@@ -12,7 +12,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>mcp-toolsdoc</ToolCommandName>
     <PackageId>Mcp.ToolsDoc</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>StaticBit</Authors>
     <Description>Config-driven generator + CI sync-check for MCP tool reference docs. Reflects over [McpServerToolType]/[McpServerTool]/[Description] attributes (Roslyn, syntax-only) and renders a TOOLS.generated.md; --check fails CI on drift. Reusable across .NET ModelContextProtocol MCP servers.</Description>
     <PackageTags>mcp;tools;docs;codegen;dotnet-tool;roslyn</PackageTags>

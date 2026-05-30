@@ -82,7 +82,7 @@ public static class Program
         else
         {
             Directory.CreateDirectory(Path.GetDirectoryName(generatedPath)!);
-            File.WriteAllText(generatedPath, rendered);
+            WriteAllTextLf(generatedPath, rendered);
         }
 
         // Pass 2: tool-count placeholder substitution (optional).
@@ -100,7 +100,7 @@ public static class Program
             }
             else
             {
-                File.WriteAllText(file, after);
+                WriteAllTextLf(file, after);
             }
         }
 
@@ -416,6 +416,15 @@ public static class Program
     }
 
     private static string NormalizeLineEndings(string s) => s.Replace("\r\n", "\n");
+
+    /// <summary>
+    /// Write text with normalized LF line endings, regardless of the host OS. This keeps
+    /// generated/substituted files stable across Windows and Unix workstations — and matches
+    /// the default <c>.gitattributes eol=lf</c> in our consuming repos so <c>git status</c>
+    /// doesn't show phantom modifications after a regeneration run on Windows.
+    /// </summary>
+    private static void WriteAllTextLf(string path, string content) =>
+        File.WriteAllText(path, NormalizeLineEndings(content));
 }
 
 internal sealed record ServerSpec(string Id, string DisplayName, string ToolsDir, string Blurb);
