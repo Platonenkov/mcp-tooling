@@ -4,7 +4,7 @@ Shared tooling for our .NET MCP servers. **This repo is public** (it hosts reusa
 that repos under two different GitHub owners must call, which GitHub only allows from a public
 host). Keep everything here repo-agnostic — no internal hostnames, server paths, or fleet
 specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Server/Tools`,
-`my-mcp.example.com`). It ships four `dotnet tool`s, consumed by the MCP repos via
+`my-mcp.example.com`). It ships five `dotnet tool`s, consumed by the MCP repos via
 `.config/dotnet-tools.json`:
 - **`Mcp.ToolsDoc`** (`src/Mcp.ToolsDoc`, command `mcp-toolsdoc`) — config-driven (`toolsdoc.json`)
   generator of a Markdown tool reference from `[McpServerToolType]` / `[McpServerTool]` /
@@ -26,8 +26,15 @@ specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Serve
   hostname / callbackPort / OAuth-scope / AS-hostname consistency against the inventory.
   Repos not in the inventory (mcp-tooling, mcp-auth, third parties) pass with every check as
   a no-op. Includes a Levenshtein-based "did you mean?" suggestion for hostname typos.
+- **`Mcp.SkillLint`** (`src/Mcp.SkillLint`, command `mcp-skilllint`) — cross-plugin SKILL.md
+  trigger overlap detector. Walks `plugins/*/skills/*/SKILL.md`, extracts the quoted trigger
+  phrases from the YAML-frontmatter `description`, and flags identical triggers reused across
+  plugins (errors) plus Levenshtein-near-duplicates (warnings). Optional `skilllint.json` at
+  the repo root whitelists intentional sharing via `sharedTriggers: [{ trigger, plugins }]`.
+  Repos with no `plugins/*/skills/*/SKILL.md` (mcp-tooling itself, third parties) pass as a
+  no-op. Prevents the wrong-plugin-loads-for-the-query bug in cloud-vs-local plugin pairs.
 
-It also hosts four **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
+It also hosts five **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
 consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
 - **`docker-build-push.yml`** — build + push multi-arch ghcr.io images from a JSON image matrix
   (optional `github_token` build-secret for private GH Packages restore).
@@ -38,6 +45,9 @@ consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
   internal `[..](path)` and `[..](#anchor)` link against the live tree.
 - **`fleet-lint.yml`** — cross-repo consistency gate (calls `mcp-fleetlint --check`). Same
   3-line caller pattern. Validates the calling repo against the canonical `fleet-lint.json`.
+- **`skill-lint.yml`** — cross-plugin SKILL.md trigger overlap gate (calls
+  `mcp-skilllint --check`). Same 3-line caller pattern. Validates that no two plugins in the
+  calling repo share an identical trigger phrase (unless whitelisted in `skilllint.json`).
 
 ## Documentation — bilingual, enforced by CI
 

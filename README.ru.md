@@ -201,6 +201,58 @@ jobs:
     uses: Platonenkov/mcp-tooling/.github/workflows/fleet-lint.yml@main
 ```
 
+## `Mcp.SkillLint` — кросс-плагиновый гейт перекрытия SKILL.md триггеров
+
+**.NET-тул**, который обходит `plugins/*/skills/*/SKILL.md` в вызывающем репо, извлекает
+закавыченные триггер-фразы из поля `description` YAML-frontmatter и флагает пересечения
+между плагинами. Ловит класс багов, когда Claude Code plugin loader подтягивает не тот
+плагин (или сразу оба) на запрос — потому что два плагина в одном репо, как правило
+cloud-vs-local пара (`xrpl-cloud` / `xrpl-local`, `telegram-bot` / `telegram-user`,
+`x-mcp-cloud` / `x-mcp-local`), объявили один и тот же естественно-языковой триггер.
+
+Проверки:
+- **Conflicts (errors)** — идентичный триггер-keyword (case-insensitive, whitespace-collapsed)
+  в двух или более SKILL.md разных плагинов, если только не разрешён whitelist'ом.
+- **Near-overlaps (warnings)** — Levenshtein distance ≤ 2 между триггерами из разных плагинов
+  (по умолчанию `nearOverlapMinLength` = 5 символов). Выявляет typo-level дубликаты и
+  near-miss'ы, где автор, скорее всего, *хотел* поделиться. Warnings никогда не роняют CI.
+
+Репо без `plugins/*/skills/*/SKILL.md` (например, сам `mcp-tooling`, третьесторонние
+consumer'ы) проходят чисто — каждая проверка no-op.
+
+Опциональный `skilllint.json` в корне репо:
+
+```jsonc
+{
+  // Триггер-ключевые-слова, осознанно разделяемые двумя или более плагинами. Подавляет
+  // conflict-ошибку, когда триггер присутствует ровно в перечисленных плагинах (и только в них).
+  "sharedTriggers": [
+    { "trigger": "telegram", "plugins": ["telegram-bot", "telegram-user"] }
+  ],
+  // Имена папок плагинов, которые полностью пропускать. Используйте для архивных плагинов.
+  "excludePlugins": [],
+  // Максимальный Levenshtein-distance для near-overlap warnings (по умолчанию 2).
+  "nearOverlapDistance": 2,
+  // Минимальная длина триггера, чтобы вообще рассматривать near-overlap (по умолчанию 5;
+  // короче — шум).
+  "nearOverlapMinLength": 5
+}
+```
+
+```bash
+dotnet tool install Mcp.SkillLint
+dotnet tool run mcp-skilllint            # write-mode: список конфликтов + warnings + summary
+dotnet tool run mcp-skilllint --check    # CI: ненулевой код выхода при любом неразрешённом конфликте
+```
+
+```yaml
+# .github/workflows/skill-lint.yml — тонкий caller переиспользуемого workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  skilllint:
+    uses: Platonenkov/mcp-tooling/.github/workflows/skill-lint.yml@main
+```
+
 ## Переиспользуемые CI/CD workflow
 
 Два [переиспользуемых GitHub Actions workflow](https://docs.github.com/actions/using-workflows/reusing-workflows)
@@ -282,9 +334,10 @@ command="/opt/<name>/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-fo
 
 ## Релизы
 
-Версия каждого тула живёт в его csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`). Пуш тега
-`v X.Y.Z` пакует **оба** и публикует на nuget.org через `.github/workflows/publish.yml`
-(`--skip-duplicate`, поэтому неизменённые версии — no-op; требуется секрет `NUGET_API_KEY`).
-Перед тегом — бампнуть нужный csproj `<Version>`.
+Версия каждого тула живёт в его csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`,
+`src/Mcp.LinkCheck`, `src/Mcp.FleetLint`, `src/Mcp.SkillLint`). Пуш тега `v X.Y.Z` пакует
+**все** и публикует на nuget.org через `.github/workflows/publish.yml` (`--skip-duplicate`,
+поэтому неизменённые версии — no-op; требуется секрет `NUGET_API_KEY`). Перед тегом —
+бампнуть нужный csproj `<Version>`.
 
 Лицензия: MIT.

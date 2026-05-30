@@ -1,0 +1,50 @@
+name: skill-lint
+
+# Reusable workflow: cross-plugin SKILL.md trigger-keyword overlap detector via the shared
+# `Mcp.SkillLint` dotnet tool. Consumers call this from their own
+# .github/workflows/skill-lint.yml with:
+#
+#   uses: Platonenkov/mcp-tooling/.github/workflows/skill-lint.yml@main
+#
+# Validates that no two plugins in the calling repo share an identical trigger keyword in
+# their SKILL.md frontmatter `description` field (unless explicitly whitelisted in
+# `skilllint.json` > `sharedTriggers`). Levenshtein-near-duplicates surface as warnings.
+#
+# Repos with no `plugins/*/skills/*/SKILL.md` (e.g. mcp-tooling itself) get a clean pass —
+# every check is a no-op.
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: 'dotnet SDK version to use.'
+        type: string
+        default: '10.0.x'
+
+permissions:
+  contents: read
+
+jobs:
+  skilllint:
+    name: SKILL.md trigger overlap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props', '.config/dotnet-tools.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: Run mcp-skilllint
+        run: dotnet tool run mcp-skilllint --check
