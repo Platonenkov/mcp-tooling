@@ -47,6 +47,19 @@ pairs → `.i18npairs`. Consuming MCP repos run the published tool via `dotnet t
 - Validate changes against a real repo, e.g.:
   `dotnet run --project src/Mcp.ToolsDoc -- --repo-root <repo> --config <cfg.json>`.
 
+### `markerFiles` convention for SKILL.md (cross-repo)
+
+When advising on a consumer repo, the standing convention is:
+
+- Every plugin `SKILL.md` whose body mentions a tool count must be listed in
+  `toolsdoc.json` → `markerFiles`, with the headline wrapped as
+  `<!-- toolcount:<server-id> -->N<!-- /toolcount:<server-id> -->`.
+- Use `<!-- toolcount:total -->` only on aggregate surfaces (README, INSTALL); per-plugin
+  SKILL.md should reference its own `<server-id>` so the number reflects exactly that plugin.
+- Rolled out across `telegram-mcp`, `staticbit-xrpl-mcp`, `x-mcp`, `XrplMeta.Mcp` (PRs:
+  `telegram-mcp#28`, `staticbit-xrpl-mcp#8`, `x-mcp#20`, `XrplMeta.Mcp#1`). New MCP repos should
+  bootstrap their `markerFiles` with the plugin SKILL.md paths from day one.
+
 ## Releases
 
 Version is in `src/Mcp.ToolsDoc/Mcp.ToolsDoc.csproj` (`<Version>`). Pushing a `v X.Y.Z` tag

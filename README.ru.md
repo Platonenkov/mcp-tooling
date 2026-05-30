@@ -35,13 +35,26 @@ dotnet tool install Mcp.ToolsDoc
   ],
   "generatedOutput": "docs/TOOLS.generated.md",
   // опционально: держать маркеры <!-- toolcount:NAME -->N<!-- /toolcount:NAME --> в синхроне
-  "markerFiles": ["README.md", "docs/INSTALL.md"],
+  // Соглашение: включайте сюда SKILL.md каждого плагина, чтобы headline-счёт
+  // его инструментов оставался актуальным. <!-- toolcount:total --> = сумма
+  // всех серверов; <!-- toolcount:<server-id> --> = счёт одного сервера.
+  "markerFiles": [
+    "README.md",
+    "docs/INSTALL.md",
+    "plugins/<plugin>/skills/<skill>/SKILL.md"
+  ],
   // опционально: hand-curated cheatsheet, в котором должен упоминаться каждый инструмент
   "cheatsheet": "docs/TOOLS.md"
 }
 ```
 
 Обязателен только `servers`. `markerFiles` и `cheatsheet` — по желанию.
+**Кросс-репозиторное соглашение**: каждый `SKILL.md` плагина, в чьём теле
+упоминается количество инструментов, должен быть в `markerFiles` — чтобы его
+headline оставался актуальным автоматически, а CI-гейт `--check` ловил drift.
+SKILL.md руками поддерживают триггер-ключевые-слова для агента и per-tool
+intent-таблицы; headline tool-count — единственная часть, которую *можно*
+авто-подставлять, и теперь подставляется.
 
 ### Запуск
 
