@@ -159,6 +159,45 @@ jobs:
     uses: Platonenkov/mcp-tooling/.github/workflows/docs-links.yml@main
 ```
 
+## `Mcp.FleetLint` — cross-repo consistency gate
+
+A **.NET tool** that validates each MCP repo against the canonical **fleet inventory**
+([`fleet-lint.json`](fleet-lint.json) at this repo's root). Catches the class of typos and
+config drift that local tests cannot see — they cross repo boundaries.
+
+The inventory is the single source of truth for: each MCP's OAuth scope, the canonical
+`https://<host>/mcp` hostname, the OAuth callback port number used by its Claude Code
+plugin, and the authorization-server hostname. Downstream consumers fetch this file at
+CI time via `https://raw.githubusercontent.com/Platonenkov/mcp-tooling/main/fleet-lint.json`.
+
+Per-repo checks (each MCP's own consistency vs. the inventory):
+- **Hostname consistency** — every `*.staticbit.io` string in committed files must match
+  the repo's own canonical host, the AS host, or another MCP in the fleet. Anything else
+  is flagged with a Levenshtein-based "did you mean?" suggestion.
+- **callbackPort** — Claude Code plugin `.mcp.json` manifests' `oauth.callbackPort` must
+  match the canonical port for the repo's MCP.
+- **OAuth scope** — `appsettings*.json` `OAuth.RequiredScope` must match the inventory.
+- **AS hostname typos** — any `auth.*` reference within edit distance 3 of the canonical
+  AS hostname but not exactly equal to it is flagged. Third-party `auth.example.com`
+  references are left alone.
+
+Repos NOT in the inventory (`mcp-tooling`, `mcp-auth`, or any third-party consumer) get
+a clean pass: every check is a no-op.
+
+```bash
+dotnet tool install Mcp.FleetLint
+dotnet tool run mcp-fleetlint            # write-mode: lists issues + summary
+dotnet tool run mcp-fleetlint --check    # CI: exit non-zero on any issue
+```
+
+```yaml
+# .github/workflows/fleet-lint.yml — thin caller of the reusable workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  fleetlint:
+    uses: Platonenkov/mcp-tooling/.github/workflows/fleet-lint.yml@main
+```
+
 ## Reusable CI/CD workflows
 
 Two [reusable GitHub Actions workflows](https://docs.github.com/actions/using-workflows/reusing-workflows)

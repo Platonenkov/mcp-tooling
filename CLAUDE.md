@@ -4,7 +4,7 @@ Shared tooling for our .NET MCP servers. **This repo is public** (it hosts reusa
 that repos under two different GitHub owners must call, which GitHub only allows from a public
 host). Keep everything here repo-agnostic — no internal hostnames, server paths, or fleet
 specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Server/Tools`,
-`my-mcp.example.com`). It ships three `dotnet tool`s, consumed by the MCP repos via
+`my-mcp.example.com`). It ships four `dotnet tool`s, consumed by the MCP repos via
 `.config/dotnet-tools.json`:
 - **`Mcp.ToolsDoc`** (`src/Mcp.ToolsDoc`, command `mcp-toolsdoc`) — config-driven (`toolsdoc.json`)
   generator of a Markdown tool reference from `[McpServerToolType]` / `[McpServerTool]` /
@@ -19,8 +19,15 @@ specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Serve
   Same-repo `https://github.com/<owner>/<repo>/blob/main/...` URLs auto-detected from
   `git remote`. External `http(s)://` skipped by default (`linkcheck.json:checkExternalLinks=true`
   to opt in). Optional `linkcheck.json` for `excludePaths` / `allowedAnchors`.
+- **`Mcp.FleetLint`** (`src/Mcp.FleetLint`, command `mcp-fleetlint`) — cross-repo consistency
+  gate. Each consumer repo runs against itself; the canonical fleet inventory is
+  `fleet-lint.json` here at the repo root (downloaded by downstreams from
+  `https://raw.githubusercontent.com/Platonenkov/mcp-tooling/main/fleet-lint.json`). Checks
+  hostname / callbackPort / OAuth-scope / AS-hostname consistency against the inventory.
+  Repos not in the inventory (mcp-tooling, mcp-auth, third parties) pass with every check as
+  a no-op. Includes a Levenshtein-based "did you mean?" suggestion for hostname typos.
 
-It also hosts three **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
+It also hosts four **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
 consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
 - **`docker-build-push.yml`** — build + push multi-arch ghcr.io images from a JSON image matrix
   (optional `github_token` build-secret for private GH Packages restore).
@@ -29,6 +36,8 @@ consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
 - **`docs-links.yml`** — markdown link integrity gate (calls `mcp-linkcheck --check`). Consumer
   caller is a 3-line `.github/workflows/docs-links.yml` that just `uses:` this. Validates every
   internal `[..](path)` and `[..](#anchor)` link against the live tree.
+- **`fleet-lint.yml`** — cross-repo consistency gate (calls `mcp-fleetlint --check`). Same
+  3-line caller pattern. Validates the calling repo against the canonical `fleet-lint.json`.
 
 ## Documentation — bilingual, enforced by CI
 
