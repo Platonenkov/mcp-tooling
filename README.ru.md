@@ -116,6 +116,51 @@ jobs:
       - run: dotnet tool run mcp-i18ncheck
 ```
 
+## `Mcp.LinkCheck` — гейт целостности markdown-ссылок
+
+Config-less **.NET-тул**, который валидирует каждую ссылку `[text](path)` и
+`[text](path#anchor)` в `.md` файлах репо против живой файловой системы и
+GitHub-flavored heading slug'ов. Ловит устаревшие relative-пути, опечатки в anchor'ах
+после переименования heading, битые cross-repo ссылки через
+`https://github.com/<owner>/<repo>/blob/main/...` URL'ы.
+
+- **Внутренние пути**: `[..](docs/INSTALL.md)` → проверяет существование файла
+  относительно директории содержащего markdown'а.
+- **Anchor'ы**: `[..](#быстрый-старт)` и `[..](docs/X.md#section)` → слаг сверяется с
+  заголовками через GitHub-алгоритм (`text.downcase.gsub(/[^\p{Word}\- ]/u, '').tr(' ', '-')`).
+  HTML-anchor'ы `<a name>` / `id=` тоже распознаются.
+- **Same-repo GitHub URL'ы**: автоопределяются из `git remote get-url origin` (настраиваемо).
+- **External `http(s)://`**: пропускаются по умолчанию. Opt-in через
+  `linkcheck.json:checkExternalLinks=true`.
+
+Опциональный `linkcheck.json` в корне репо:
+
+```jsonc
+{
+  // Glob-паттерны .md файлов, которые надо скипать. bin/, obj/, node_modules/, .git/
+  // и docs/TOOLS.generated.md пропускаются автоматически.
+  "excludePaths": ["docs/historical/**/*.md"],
+  "checkExternalLinks": false,
+  // Anchor ID'ы, которые принимать даже без matching-heading'а — для legacy HTML-anchor'ов,
+  // которые не slug'ятся чисто. Использовать аккуратно.
+  "allowedAnchors": ["legacy-id"]
+}
+```
+
+```bash
+dotnet tool install Mcp.LinkCheck
+dotnet tool run mcp-linkcheck            # write-mode: список битых ссылок + summary
+dotnet tool run mcp-linkcheck --check    # CI: ненулевой код выхода при любой битой ссылке
+```
+
+```yaml
+# .github/workflows/docs-links.yml — тонкий caller переиспользуемого workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  linkcheck:
+    uses: Platonenkov/mcp-tooling/.github/workflows/docs-links.yml@main
+```
+
 ## Переиспользуемые CI/CD workflow
 
 Два [переиспользуемых GitHub Actions workflow](https://docs.github.com/actions/using-workflows/reusing-workflows)

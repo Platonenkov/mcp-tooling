@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Mcp.LinkCheck</RootNamespace>
+    <AssemblyName>mcp-linkcheck</AssemblyName>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mcp-linkcheck</ToolCommandName>
+    <PackageId>Mcp.LinkCheck</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>StaticBit</Authors>
+    <Company>StaticBit</Company>
+    <Copyright>Copyright (c) 2026 StaticBit</Copyright>
+    <Description>Markdown link integrity CI gate for MCP repos: every [text](path) link must resolve to a real file, every [text](path#anchor) must hit a real heading (GitHub-flavored slug). Catches stale paths, mis-typed anchors, broken cross-repo references. Optional external HTTPS verification. Config-less defaults; opt-in linkcheck.json for exceptions.</Description>
+    <PackageTags>mcp;docs;links;markdown;ci;dotnet-tool</PackageTags>
+    <!-- See sibling Mcp.ToolsDoc.csproj for why the host repo is on a personal account. -->
+    <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Platonenkov/mcp-tooling</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.37.0" />
+  </ItemGroup>
+
+</Project>

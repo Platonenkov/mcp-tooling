@@ -4,7 +4,7 @@ Shared tooling for our .NET MCP servers. **This repo is public** (it hosts reusa
 that repos under two different GitHub owners must call, which GitHub only allows from a public
 host). Keep everything here repo-agnostic — no internal hostnames, server paths, or fleet
 specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Server/Tools`,
-`my-mcp.example.com`). It ships two `dotnet tool`s, consumed by the MCP repos via
+`my-mcp.example.com`). It ships three `dotnet tool`s, consumed by the MCP repos via
 `.config/dotnet-tools.json`:
 - **`Mcp.ToolsDoc`** (`src/Mcp.ToolsDoc`, command `mcp-toolsdoc`) — config-driven (`toolsdoc.json`)
   generator of a Markdown tool reference from `[McpServerToolType]` / `[McpServerTool]` /
@@ -13,13 +13,22 @@ specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Serve
   gate (EN canonical + RU counterpart; `.i18nignore` / `.i18npairs`). This is the **canonical**
   implementation of our docs-i18n gate; consuming repos call it via `dotnet tool` rather than a
   copied `check-translations.sh`.
+- **`Mcp.LinkCheck`** (`src/Mcp.LinkCheck`, command `mcp-linkcheck`) — config-less markdown link
+  integrity gate. Validates `[text](path)` paths against the live filesystem and
+  `[text](path#anchor)` anchors against GitHub-flavored heading slugs in the target file.
+  Same-repo `https://github.com/<owner>/<repo>/blob/main/...` URLs auto-detected from
+  `git remote`. External `http(s)://` skipped by default (`linkcheck.json:checkExternalLinks=true`
+  to opt in). Optional `linkcheck.json` for `excludePaths` / `allowedAnchors`.
 
-It also hosts two **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
+It also hosts three **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
 consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
 - **`docker-build-push.yml`** — build + push multi-arch ghcr.io images from a JSON image matrix
   (optional `github_token` build-secret for private GH Packages restore).
 - **`deploy-vps.yml`** — ship a published image to a VPS over an SSH pipe into a forced-command
   `deploy.sh` (no registry login on the host), then smoke-test a healthz URL.
+- **`docs-links.yml`** — markdown link integrity gate (calls `mcp-linkcheck --check`). Consumer
+  caller is a 3-line `.github/workflows/docs-links.yml` that just `uses:` this. Validates every
+  internal `[..](path)` and `[..](#anchor)` link against the live tree.
 
 ## Documentation — bilingual, enforced by CI
 
