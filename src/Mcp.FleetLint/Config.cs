@@ -60,4 +60,20 @@ public sealed class McpEntry
     /// </summary>
     [JsonPropertyName("repo")]
     public string Repo { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Release packaging convention:
+    /// <list type="bullet">
+    ///   <item><c>"per-plugin"</c> (default for multi-plugin repos) — each plugin is released
+    ///     under its own <c>&lt;plugin&gt;--vX.Y.Z</c> tag via <c>release-plugin.yml</c>; per-plugin
+    ///     <c>CHANGELOG.md</c> files; a root <c>RELEASE.md</c> documents the procedure.</item>
+    ///   <item><c>"shared"</c> — single <c>vX.Y.Z</c> tag bumps all plugins together; one
+    ///     root <c>CHANGELOG.md</c>; no per-plugin release machinery expected. Use when the
+    ///     plugins in the repo are functionally equivalent (same surface, only transport differs)
+    ///     and always shipped together.</item>
+    /// </list>
+    /// Null is treated as <c>"per-plugin"</c>.
+    /// </summary>
+    [JsonPropertyName("releaseModel")]
+    public string? ReleaseModel { get; set; }
 }

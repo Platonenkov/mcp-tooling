@@ -11,7 +11,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>mcp-fleetlint</ToolCommandName>
     <PackageId>Mcp.FleetLint</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>StaticBit</Authors>
     <Company>StaticBit</Company>
     <Copyright>Copyright (c) 2026 StaticBit</Copyright>

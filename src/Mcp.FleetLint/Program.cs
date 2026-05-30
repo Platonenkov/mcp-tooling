@@ -73,10 +73,11 @@ public static class Program
         CheckCallbackPort(repoRoot, selfEntry, errors);
         CheckOAuthScope(repoRoot, selfEntry, errors);
         CheckAuthServerHost(repoRoot, config, errors);
+        CheckReleaseModel(repoRoot, selfEntry, errors);
 
         if (errors.Count == 0)
         {
-            Console.Out.WriteLine("OK: fleet-lint passed (4 invariant classes).");
+            Console.Out.WriteLine("OK: fleet-lint passed (5 invariant classes).");
             return 0;
         }
 
@@ -269,6 +270,44 @@ public static class Program
                 || name.Equals("Dockerfile", StringComparison.OrdinalIgnoreCase);
             if (!isText) continue;
             yield return abs;
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Check 5: Release model consistency. For repos declared "per-plugin" in fleet-lint.json
+    // (the default), assert that the per-plugin release machinery is in place — `release-plugin.yml`
+    // workflow, root `RELEASE.md` doc, and at least one `plugins/<plugin>/CHANGELOG.md`. Catches
+    // drift where a multi-plugin repo accidentally falls back to a monorepo-style release without
+    // updating its release model declaration.
+    // ---------------------------------------------------------------------------------------
+    private static void CheckReleaseModel(string repoRoot, McpEntry self, List<string> errors)
+    {
+        string model = string.IsNullOrEmpty(self.ReleaseModel) ? "per-plugin" : self.ReleaseModel;
+        if (!string.Equals(model, "per-plugin", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        string releasePluginYml = Path.Combine(repoRoot, ".github", "workflows", "release-plugin.yml");
+        if (!File.Exists(releasePluginYml))
+        {
+            errors.Add(".github/workflows/release-plugin.yml: missing — required for releaseModel=\"per-plugin\" (set releaseModel=\"shared\" in fleet-lint.json if the shared-version convention is intentional)");
+        }
+
+        string releaseMd = Path.Combine(repoRoot, "RELEASE.md");
+        if (!File.Exists(releaseMd))
+        {
+            errors.Add("RELEASE.md: missing — required for releaseModel=\"per-plugin\" (documents the per-plugin tag procedure)");
+        }
+
+        string pluginsDir = Path.Combine(repoRoot, "plugins");
+        if (Directory.Exists(pluginsDir))
+        {
+            bool anyPerPluginChangelog = Directory.EnumerateFiles(pluginsDir, "CHANGELOG.md", SearchOption.AllDirectories).Any();
+            if (!anyPerPluginChangelog)
+            {
+                errors.Add("plugins/*/CHANGELOG.md: no per-plugin CHANGELOG.md found — required for releaseModel=\"per-plugin\" (each plugin needs its own changelog so release-plugin.sh can prepend entries cleanly)");
+            }
         }
     }
 

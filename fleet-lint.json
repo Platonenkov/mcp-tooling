@@ -27,7 +27,8 @@
       "scope": "xrplmeta",
       "host": "xrpl-meta-mcp.staticbit.io",
       "callbackPort": 8129,
-      "repo": "StaticBit-io/XrplMeta.Mcp"
+      "repo": "StaticBit-io/XrplMeta.Mcp",
+      "releaseModel": "shared"
     }
   ],
   "allowedExtraHostnames": []
