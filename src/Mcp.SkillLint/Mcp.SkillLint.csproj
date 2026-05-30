@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Mcp.SkillLint</RootNamespace>
+    <AssemblyName>mcp-skilllint</AssemblyName>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mcp-skilllint</ToolCommandName>
+    <PackageId>Mcp.SkillLint</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>StaticBit</Authors>
+    <Company>StaticBit</Company>
+    <Copyright>Copyright (c) 2026 StaticBit</Copyright>
+    <Description>Cross-plugin SKILL.md trigger-keyword overlap detector for the MCP fleet: parses every plugins/&lt;plugin&gt;/skills/&lt;skill&gt;/SKILL.md, extracts the quoted trigger phrases from the YAML-frontmatter description, and flags identical triggers reused across plugins (conflicts) plus near-duplicates within Levenshtein distance 2 (warnings). Optional skilllint.json whitelist for intentional sharing. Prevents the wrong-plugin-loads-for-the-query bug in cloud-vs-local plugin pairs.</Description>
+    <PackageTags>mcp;ci;skill;triggers;dotnet-tool;plugins</PackageTags>
+    <!-- See sibling Mcp.ToolsDoc.csproj for why the host repo is on a personal account. -->
+    <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Platonenkov/mcp-tooling</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.37.0" />
+  </ItemGroup>
+
+</Project>

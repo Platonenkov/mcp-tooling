@@ -198,6 +198,57 @@ jobs:
     uses: Platonenkov/mcp-tooling/.github/workflows/fleet-lint.yml@main
 ```
 
+## `Mcp.SkillLint` — cross-plugin SKILL.md trigger overlap gate
+
+A **.NET tool** that walks `plugins/*/skills/*/SKILL.md` in the calling repo, extracts the
+quoted trigger phrases from the YAML-frontmatter `description` field, and flags overlaps
+across plugins. Catches the class of bug where the Claude Code plugin loader picks the wrong
+plugin (or both) for a query because two plugins in the same repo — typically a cloud-vs-local
+pair like `xrpl-cloud` / `xrpl-local`, `telegram-bot` / `telegram-user`,
+`x-mcp-cloud` / `x-mcp-local` — declare the same natural-language trigger.
+
+Checks:
+- **Conflicts (errors)** — identical trigger keyword (case-insensitive, whitespace-collapsed)
+  in two or more plugins' SKILL.md, unless explicitly whitelisted.
+- **Near-overlaps (warnings)** — Levenshtein distance ≤ 2 between triggers from different
+  plugins (default `nearOverlapMinLength` = 5 chars). Surfaces typo-level duplicates and
+  near-misses where the author probably *meant* to share. Warnings never fail CI.
+
+Repos with no `plugins/*/skills/*/SKILL.md` (e.g. `mcp-tooling` itself, third-party consumers)
+pass clean — every check is a no-op.
+
+Optional `skilllint.json` at the repo root:
+
+```jsonc
+{
+  // Trigger keywords intentionally shared across two or more plugins. Suppresses the
+  // conflict error when the trigger appears exactly in the listed plugins (and only there).
+  "sharedTriggers": [
+    { "trigger": "telegram", "plugins": ["telegram-bot", "telegram-user"] }
+  ],
+  // Plugin directory names to skip entirely. Use for archived plugins.
+  "excludePlugins": [],
+  // Max Levenshtein distance for near-overlap warnings (default 2).
+  "nearOverlapDistance": 2,
+  // Min trigger length to even consider for near-overlap (default 5; shorter is noise).
+  "nearOverlapMinLength": 5
+}
+```
+
+```bash
+dotnet tool install Mcp.SkillLint
+dotnet tool run mcp-skilllint            # write-mode: lists conflicts + warnings + summary
+dotnet tool run mcp-skilllint --check    # CI: exit non-zero on any unwhitelisted conflict
+```
+
+```yaml
+# .github/workflows/skill-lint.yml — thin caller of the reusable workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  skilllint:
+    uses: Platonenkov/mcp-tooling/.github/workflows/skill-lint.yml@main
+```
+
 ## Reusable CI/CD workflows
 
 Two [reusable GitHub Actions workflows](https://docs.github.com/actions/using-workflows/reusing-workflows)
@@ -279,9 +330,10 @@ consuming repo under `deploy/deploy.sh`.
 
 ## Releasing
 
-Each tool's version lives in its csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`). Pushing a
-`v X.Y.Z` tag packs **both** and publishes them to nuget.org via
-`.github/workflows/publish.yml` (`--skip-duplicate`, so unchanged versions are no-ops; requires
-the repo secret `NUGET_API_KEY`). Bump the relevant csproj `<Version>` before tagging.
+Each tool's version lives in its csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`,
+`src/Mcp.LinkCheck`, `src/Mcp.FleetLint`, `src/Mcp.SkillLint`). Pushing a `v X.Y.Z` tag packs
+**all** and publishes them to nuget.org via `.github/workflows/publish.yml`
+(`--skip-duplicate`, so unchanged versions are no-ops; requires the repo secret
+`NUGET_API_KEY`). Bump the relevant csproj `<Version>` before tagging.
 
 License: MIT.
