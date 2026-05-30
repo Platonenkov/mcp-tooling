@@ -35,13 +35,25 @@ dotnet tool install Mcp.ToolsDoc
   ],
   "generatedOutput": "docs/TOOLS.generated.md",
   // optional: keep <!-- toolcount:NAME -->N<!-- /toolcount:NAME --> markers in sync
-  "markerFiles": ["README.md", "docs/INSTALL.md"],
+  // Convention: include each plugin's SKILL.md here so its headline tool-count
+  // stays accurate. <!-- toolcount:total --> = sum across all servers;
+  // <!-- toolcount:<server-id> --> = a single server's count.
+  "markerFiles": [
+    "README.md",
+    "docs/INSTALL.md",
+    "plugins/<plugin>/skills/<skill>/SKILL.md"
+  ],
   // optional: a hand-curated cheatsheet that must mention every tool by name
   "cheatsheet": "docs/TOOLS.md"
 }
 ```
 
-Only `servers` is required. `markerFiles` and `cheatsheet` are opt-in.
+Only `servers` is required. `markerFiles` and `cheatsheet` are opt-in. The
+**cross-repo convention** is that every plugin `SKILL.md` whose body mentions a
+tool count is listed in `markerFiles`, so its headline stays accurate
+automatically and the `--check` CI gate fails on drift. SKILL.md files
+hand-maintain agent-trigger keywords and per-tool intent tables; the tool-count
+headline is the one piece that *can* be auto-substituted, and now is.
 
 ### Run
 
