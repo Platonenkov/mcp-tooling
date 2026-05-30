@@ -14,10 +14,17 @@
     <PackageId>Mcp.ToolsDoc</PackageId>
     <Version>0.1.1</Version>
     <Authors>StaticBit</Authors>
+    <Company>StaticBit</Company>
+    <Copyright>Copyright (c) 2026 StaticBit</Copyright>
     <Description>Config-driven generator + CI sync-check for MCP tool reference docs. Reflects over [McpServerToolType]/[McpServerTool]/[Description] attributes (Roslyn, syntax-only) and renders a TOOLS.generated.md; --check fails CI on drift. Reusable across .NET ModelContextProtocol MCP servers.</Description>
     <PackageTags>mcp;tools;docs;codegen;dotnet-tool;roslyn</PackageTags>
+    <!-- The host repository is at github.com/Platonenkov/mcp-tooling (Authors=StaticBit
+         is the package brand; the repo lives on a personal account so the reusable
+         GH Actions workflows under it can be called from repos under multiple owners,
+         which GitHub only allows from a public host). -->
     <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Platonenkov/mcp-tooling</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

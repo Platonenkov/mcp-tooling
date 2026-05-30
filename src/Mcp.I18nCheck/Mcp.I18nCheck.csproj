@@ -13,10 +13,14 @@
     <PackageId>Mcp.I18nCheck</PackageId>
     <Version>0.1.0</Version>
     <Authors>StaticBit</Authors>
+    <Company>StaticBit</Company>
+    <Copyright>Copyright (c) 2026 StaticBit</Copyright>
     <Description>Bilingual-docs CI gate for MCP repos: every English doc must have its Russian counterpart (docs/&lt;path&gt;.md ↔ docs/ru/&lt;path&gt;.md mirror; X.md ↔ X.ru.md suffix elsewhere), and Russian files must be non-stub. Exemptions via .i18nignore; extra pairs via .i18npairs.</Description>
     <PackageTags>mcp;docs;i18n;translations;ci;dotnet-tool</PackageTags>
+    <!-- See sibling Mcp.ToolsDoc.csproj for why the host repo is on a personal account. -->
     <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Platonenkov/mcp-tooling</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
