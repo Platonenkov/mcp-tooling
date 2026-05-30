@@ -4,7 +4,7 @@ Shared tooling for our .NET MCP servers. **This repo is public** (it hosts reusa
 that repos under two different GitHub owners must call, which GitHub only allows from a public
 host). Keep everything here repo-agnostic — no internal hostnames, server paths, or fleet
 specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Server/Tools`,
-`my-mcp.example.com`). It ships five `dotnet tool`s, consumed by the MCP repos via
+`my-mcp.example.com`). It ships six `dotnet tool`s, consumed by the MCP repos via
 `.config/dotnet-tools.json`:
 - **`Mcp.ToolsDoc`** (`src/Mcp.ToolsDoc`, command `mcp-toolsdoc`) — config-driven (`toolsdoc.json`)
   generator of a Markdown tool reference from `[McpServerToolType]` / `[McpServerTool]` /
@@ -33,8 +33,20 @@ specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Serve
   the repo root whitelists intentional sharing via `sharedTriggers: [{ trigger, plugins }]`.
   Repos with no `plugins/*/skills/*/SKILL.md` (mcp-tooling itself, third parties) pass as a
   no-op. Prevents the wrong-plugin-loads-for-the-query bug in cloud-vs-local plugin pairs.
+- **`Mcp.InjectionGuard`** (`src/Mcp.InjectionGuard`, command `mcp-injectionguard`) —
+  Roslyn-based prompt-injection defence gate. Statically scans every `[McpServerTool]` method
+  under `src/**/Tools/*.cs` (configurable via `injectionguard.json`) and asserts that
+  external content (HTTP bodies, JSON from third-party APIs, tool output) is wrapped through
+  `UntrustedContent.Wrap(...)` / `UntrustedContent.WrapJson(...)` before being returned.
+  Methods can opt in via `[ExternalContent("origin-hint")]`, opt out via `[NotExternalContent]`,
+  or be exempted by name in `injectionguard.json:exempt`. Heuristic classification
+  (name-prefix + return-type + invocation fragment) is conservative — false positives are
+  easier to silence via the exempt list than missing returns are to catch. Companion to the
+  parallel `Mcp.Auth.ResourceServer` `UntrustedContent` helper; the tool only pattern-matches
+  the syntactic call, so it works regardless of whether the helper type is reachable at parse
+  time. Repos with no matching files pass clean.
 
-It also hosts five **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
+It also hosts six **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
 consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
 - **`docker-build-push.yml`** — build + push multi-arch ghcr.io images from a JSON image matrix
   (optional `github_token` build-secret for private GH Packages restore).
@@ -48,6 +60,10 @@ consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
 - **`skill-lint.yml`** — cross-plugin SKILL.md trigger overlap gate (calls
   `mcp-skilllint --check`). Same 3-line caller pattern. Validates that no two plugins in the
   calling repo share an identical trigger phrase (unless whitelisted in `skilllint.json`).
+- **`injection-guard.yml`** — Roslyn prompt-injection defence gate (calls
+  `mcp-injectionguard --check`). Same 3-line caller pattern. Asserts every external-content-
+  returning tool wraps through `UntrustedContent.Wrap` / `UntrustedContent.WrapJson` before
+  reaching the MCP client.
 
 ## Documentation — bilingual, enforced by CI
 

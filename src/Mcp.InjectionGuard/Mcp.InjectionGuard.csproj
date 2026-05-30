@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Mcp.InjectionGuard</RootNamespace>
+    <AssemblyName>mcp-injectionguard</AssemblyName>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mcp-injectionguard</ToolCommandName>
+    <PackageId>Mcp.InjectionGuard</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>StaticBit</Authors>
+    <Company>StaticBit</Company>
+    <Copyright>Copyright (c) 2026 StaticBit</Copyright>
+    <Description>Roslyn-based prompt-injection defence gate for the MCP fleet: statically scans every [McpServerTool] method in the consumer repo and asserts that user-generated content (HTTP bodies, JSON from external APIs, tool output) is wrapped through UntrustedContent.Wrap / UntrustedContent.WrapJson before being returned. Methods can opt in via [ExternalContent] or out via [NotExternalContent]; in their absence a conservative name + return-type + invocation heuristic classifies tools. Per-method exemptions and heuristic overrides via injectionguard.json. Companion to the parallel Mcp.Auth.ResourceServer UntrustedContent helper.</Description>
+    <PackageTags>mcp;ci;security;prompt-injection;dotnet-tool;roslyn</PackageTags>
+    <!-- See sibling Mcp.ToolsDoc.csproj for why the host repo is on a personal account. -->
+    <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Platonenkov/mcp-tooling</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+  </ItemGroup>
+
+</Project>

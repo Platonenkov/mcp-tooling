@@ -1,0 +1,52 @@
+name: injection-guard
+
+# Reusable workflow: Roslyn-based prompt-injection defence gate via the shared
+# `Mcp.InjectionGuard` dotnet tool. Consumers call this from their own
+# .github/workflows/injection-guard.yml with:
+#
+#   uses: Platonenkov/mcp-tooling/.github/workflows/injection-guard.yml@main
+#
+# Statically scans every [McpServerTool] method in the calling repo and verifies that
+# user-generated content (HTTP bodies, JSON from third-party APIs, tool output) is
+# wrapped through `UntrustedContent.Wrap(...)` / `UntrustedContent.WrapJson(...)` before
+# being returned. Methods can opt in via `[ExternalContent("origin-hint")]`, opt out via
+# `[NotExternalContent]`, or be exempted by name in `injectionguard.json`.
+#
+# Repos with no `src/**/Tools/*.cs` (e.g. mcp-tooling itself) get a clean pass — every
+# check is a no-op.
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: 'dotnet SDK version to use.'
+        type: string
+        default: '10.0.x'
+
+permissions:
+  contents: read
+
+jobs:
+  injectionguard:
+    name: Prompt-injection defence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props', '.config/dotnet-tools.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: Run mcp-injectionguard
+        run: dotnet tool run mcp-injectionguard --check

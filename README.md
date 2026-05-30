@@ -249,6 +249,65 @@ jobs:
     uses: Platonenkov/mcp-tooling/.github/workflows/skill-lint.yml@main
 ```
 
+## `Mcp.InjectionGuard` — Roslyn prompt-injection defence gate
+
+A **.NET tool** that statically scans every `[McpServerTool]` method in the calling repo
+and asserts that user-generated content (HTTP bodies, JSON from third-party APIs, tool
+output) is wrapped through `UntrustedContent.Wrap(...)` or `UntrustedContent.WrapJson(...)`
+before being returned. Pairs with the `UntrustedContent` helper that ships in the
+`Mcp.Auth.ResourceServer` SDK — the gate is syntax-only and pattern-matches the call
+regardless of where the helper lives, so it works during the rollout window when not every
+repo has wired the SDK yet.
+
+Classification rules (in order):
+- **Opt-in** — `[ExternalContent("origin-hint")]` on the method → must wrap.
+- **Opt-out** — `[NotExternalContent]` on the method → exempt (e.g. status / config tools).
+- **Per-method exemption** — `injectionguard.json:exempt: ["Method", "Type.Method"]`.
+- **Heuristic** (when no attribute fires) — conservative; method-name prefix
+  (`Get|Read|Search|List|Find|Fetch|Resolve` plus `extraNamePrefixes`) AND non-scalar
+  return type, OR return type itself is a typical external carrier (`string` / `JObject` /
+  `JArray` / `IReadOnlyList<...>` / `object`), OR body invokes a known external API
+  fragment (`*.GetAsync`, `*.SendRequestAsync`, `*.ExecuteAsync`, `*.InvokeAsync`,
+  `*.QueryAsync`, plus `extraInvocationFragments`). Tools that return `Task<bool>` /
+  `Task<int>` / other scalars are never classified as external.
+
+Per-return audit accepts: `throw`, `null`, constant literals, returns inside a `catch`
+block, returns rooted in a method parameter. Everything else must syntactically descend
+into a wrap call — directly, through a wrapped local, a wrapped object initializer, a
+wrapped ternary, or a wrapped null-coalesce.
+
+Repos with no `src/**/Tools/*.cs` (e.g. `mcp-tooling` itself, third-party consumers)
+pass clean — every check is a no-op.
+
+Optional `injectionguard.json` at the repo root:
+
+```jsonc
+{
+  // Glob patterns relative to the repo root. Default: src/**/Tools/*.cs.
+  "include": ["src/**/Tools/*.cs", "servers/*/src/**/Tools/*.cs"],
+  // Per-method exemption list. Matches either the simple method name or Type.Method.
+  "exempt": ["GetStatus", "AuthTool.WhoAmI"],
+  // Extra reader-style method-name prefixes (built-ins always honoured).
+  "extraNamePrefixes": ["Dump", "Export"],
+  // Extra invocation-expression substrings that classify the method as external.
+  "extraInvocationFragments": ["ResolveSecretAsync"]
+}
+```
+
+```bash
+dotnet tool install Mcp.InjectionGuard
+dotnet tool run mcp-injectionguard            # write-mode: lists findings + summary
+dotnet tool run mcp-injectionguard --check    # CI: exit non-zero on any unwrapped return
+```
+
+```yaml
+# .github/workflows/injection-guard.yml — thin caller of the reusable workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  injectionguard:
+    uses: Platonenkov/mcp-tooling/.github/workflows/injection-guard.yml@main
+```
+
 ## Reusable CI/CD workflows
 
 Two [reusable GitHub Actions workflows](https://docs.github.com/actions/using-workflows/reusing-workflows)
@@ -331,8 +390,8 @@ consuming repo under `deploy/deploy.sh`.
 ## Releasing
 
 Each tool's version lives in its csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`,
-`src/Mcp.LinkCheck`, `src/Mcp.FleetLint`, `src/Mcp.SkillLint`). Pushing a `v X.Y.Z` tag packs
-**all** and publishes them to nuget.org via `.github/workflows/publish.yml`
+`src/Mcp.LinkCheck`, `src/Mcp.FleetLint`, `src/Mcp.SkillLint`, `src/Mcp.InjectionGuard`).
+Pushing a `v X.Y.Z` tag packs **all** and publishes them to nuget.org via `.github/workflows/publish.yml`
 (`--skip-duplicate`, so unchanged versions are no-ops; requires the repo secret
 `NUGET_API_KEY`). Bump the relevant csproj `<Version>` before tagging.
 
