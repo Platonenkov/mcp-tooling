@@ -253,6 +253,65 @@ jobs:
     uses: Platonenkov/mcp-tooling/.github/workflows/skill-lint.yml@main
 ```
 
+## `Mcp.InjectionGuard` — Roslyn-гейт защиты от prompt-injection
+
+**.NET-тул**, который статически сканирует каждый `[McpServerTool]`-метод в вызывающем
+репо и утверждает, что пользовательский контент (HTTP-тела, JSON от сторонних API, вывод
+тулов) обёрнут через `UntrustedContent.Wrap(...)` или `UntrustedContent.WrapJson(...)`
+прежде чем возвращён. Парится с хелпером `UntrustedContent` из SDK
+`Mcp.Auth.ResourceServer` — гейт syntax-only и pattern-матчит вызов независимо от того,
+где живёт хелпер, поэтому работает на этапе rollout, когда не каждое репо ещё подцепило
+SDK.
+
+Правила классификации (в порядке применения):
+- **Opt-in** — `[ExternalContent("origin-hint")]` на методе → wrap обязателен.
+- **Opt-out** — `[NotExternalContent]` на методе → освобождение (например, status-/config-тулы).
+- **Per-method exemption** — `injectionguard.json:exempt: ["Method", "Type.Method"]`.
+- **Эвристика** (если ни один атрибут не сработал) — консервативная; префикс имени метода
+  (`Get|Read|Search|List|Find|Fetch|Resolve` плюс `extraNamePrefixes`) И нескалярный тип
+  возврата, ИЛИ тип возврата сам по себе — типичный носитель внешнего контента (`string` /
+  `JObject` / `JArray` / `IReadOnlyList<...>` / `object`), ИЛИ тело метода вызывает
+  известный фрагмент внешнего API (`*.GetAsync`, `*.SendRequestAsync`, `*.ExecuteAsync`,
+  `*.InvokeAsync`, `*.QueryAsync`, плюс `extraInvocationFragments`). Тулы, возвращающие
+  `Task<bool>` / `Task<int>` / другие скаляры, никогда не классифицируются как external.
+
+Аудит каждого `return` принимает: `throw`, `null`, константные литералы, `return` внутри
+`catch`-блока, `return`, корень которого — параметр метода. Всё остальное должно
+синтаксически уходить в wrap-вызов — напрямую, через обёрнутую локальную, обёрнутый
+object initializer, обёрнутый тернарник или обёрнутый null-coalesce.
+
+Репо без `src/**/Tools/*.cs` (например, сам `mcp-tooling`, третьесторонние consumer'ы)
+проходят чисто — каждая проверка no-op.
+
+Опциональный `injectionguard.json` в корне репо:
+
+```jsonc
+{
+  // Glob-паттерны относительно корня репо. По умолчанию: src/**/Tools/*.cs.
+  "include": ["src/**/Tools/*.cs", "servers/*/src/**/Tools/*.cs"],
+  // Per-method exemption list. Матчится либо по простому имени метода, либо по Type.Method.
+  "exempt": ["GetStatus", "AuthTool.WhoAmI"],
+  // Дополнительные reader-style префиксы имён методов (встроенные всегда соблюдаются).
+  "extraNamePrefixes": ["Dump", "Export"],
+  // Дополнительные подстроки в invocation-выражениях, классифицирующие метод как external.
+  "extraInvocationFragments": ["ResolveSecretAsync"]
+}
+```
+
+```bash
+dotnet tool install Mcp.InjectionGuard
+dotnet tool run mcp-injectionguard            # write-mode: список находок + summary
+dotnet tool run mcp-injectionguard --check    # CI: ненулевой код выхода при любом необёрнутом return
+```
+
+```yaml
+# .github/workflows/injection-guard.yml — тонкий caller переиспользуемого workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  injectionguard:
+    uses: Platonenkov/mcp-tooling/.github/workflows/injection-guard.yml@main
+```
+
 ## Переиспользуемые CI/CD workflow
 
 Два [переиспользуемых GitHub Actions workflow](https://docs.github.com/actions/using-workflows/reusing-workflows)
@@ -335,7 +394,8 @@ command="/opt/<name>/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-fo
 ## Релизы
 
 Версия каждого тула живёт в его csproj (`src/Mcp.ToolsDoc`, `src/Mcp.I18nCheck`,
-`src/Mcp.LinkCheck`, `src/Mcp.FleetLint`, `src/Mcp.SkillLint`). Пуш тега `v X.Y.Z` пакует
+`src/Mcp.LinkCheck`, `src/Mcp.FleetLint`, `src/Mcp.SkillLint`, `src/Mcp.InjectionGuard`).
+Пуш тега `v X.Y.Z` пакует
 **все** и публикует на nuget.org через `.github/workflows/publish.yml` (`--skip-duplicate`,
 поэтому неизменённые версии — no-op; требуется секрет `NUGET_API_KEY`). Перед тегом —
 бампнуть нужный csproj `<Version>`.
