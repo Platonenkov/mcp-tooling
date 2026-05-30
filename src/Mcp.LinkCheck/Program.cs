@@ -89,7 +89,12 @@ public static class Program
 
                 if (TryMatchRepoPrefix(url, config.RepoUrlPrefixes, out string? mapped) && mapped is not null)
                 {
-                    ValidateRelative(mdRel, mdAbs, mapped, link.Line + 1, repoRoot, allowedAnchors, anchorCache, errors);
+                    // Mapped URLs are relative to the REPO ROOT (e.g.
+                    // `https://github.com/<owner>/<repo>/blob/main/docs/X.md` → `docs/X.md` from
+                    // the repo root). Resolve from repoRoot instead of the containing markdown's
+                    // directory, otherwise we mis-flag a real link as missing whenever it
+                    // crosses subdirectories.
+                    ValidateLink(mdRel, repoRoot, mapped, link.Line + 1, repoRoot, allowedAnchors, anchorCache, errors);
                     continue;
                 }
 
@@ -102,7 +107,7 @@ public static class Program
                     continue;
                 }
 
-                ValidateRelative(mdRel, mdAbs, url, link.Line + 1, repoRoot, allowedAnchors, anchorCache, errors);
+                ValidateLink(mdRel, Path.GetDirectoryName(mdAbs) ?? repoRoot, url, link.Line + 1, repoRoot, allowedAnchors, anchorCache, errors);
             }
         }
 
@@ -117,9 +122,15 @@ public static class Program
         return check ? 1 : 0;
     }
 
-    private static void ValidateRelative(
+    /// <summary>
+    /// Validate one URL extracted from a markdown file.
+    /// <paramref name="baseDir"/> is the directory the URL is resolved against (the markdown's
+    /// directory for relative links; <paramref name="repoRoot"/> for paths extracted from a
+    /// repo-internal <c>https://github.com/...</c> URL).
+    /// </summary>
+    private static void ValidateLink(
         string mdRel,
-        string mdAbs,
+        string baseDir,
         string url,
         int line,
         string repoRoot,
@@ -135,7 +146,6 @@ public static class Program
             return; // already handled by the `#` branch above
 
         string decoded = Uri.UnescapeDataString(rawPath);
-        string baseDir = Path.GetDirectoryName(mdAbs) ?? repoRoot;
         string targetAbs = Path.GetFullPath(Path.Combine(baseDir, decoded));
 
         // Reject paths that escape the repo (..\..\..\Windows) — silently treat as external.
