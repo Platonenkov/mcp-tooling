@@ -116,6 +116,49 @@ jobs:
       - run: dotnet tool run mcp-i18ncheck
 ```
 
+## `Mcp.LinkCheck` — markdown link integrity gate
+
+A config-less **.NET tool** that validates every `[text](path)` and `[text](path#anchor)`
+link in the repo's `.md` files against the live filesystem and GitHub-flavored heading
+slugs. Catches stale relative paths, mis-typed anchors after a heading rename, broken
+cross-repo references via `https://github.com/<owner>/<repo>/blob/main/...` URLs.
+
+- **Internal paths**: `[..](docs/INSTALL.md)` → asserts the file exists relative to the
+  containing markdown's directory.
+- **Anchors**: `[..](#быстрый-старт)` and `[..](docs/X.md#section)` → slugs target headings
+  with the GitHub algorithm (`text.downcase.gsub(/[^\p{Word}\- ]/u, '').tr(' ', '-')`).
+  HTML `<a name>` / `id=` anchors are also recognised.
+- **Same-repo GitHub URLs**: auto-detected from `git remote get-url origin` (configurable).
+- **External `http(s)://`**: skipped by default. Opt-in via `linkcheck.json:checkExternalLinks=true`.
+
+Optional `linkcheck.json` at the repo root:
+
+```jsonc
+{
+  // Glob patterns of .md files to skip. bin/, obj/, node_modules/, .git/, and
+  // docs/TOOLS.generated.md are skipped automatically.
+  "excludePaths": ["docs/historical/**/*.md"],
+  "checkExternalLinks": false,
+  // Anchor IDs to accept even when no heading matches — for legacy HTML anchors that
+  // don't slugify cleanly. Use sparingly.
+  "allowedAnchors": ["legacy-id"]
+}
+```
+
+```bash
+dotnet tool install Mcp.LinkCheck
+dotnet tool run mcp-linkcheck            # write-mode: lists broken links + summary
+dotnet tool run mcp-linkcheck --check    # CI: exit non-zero on any broken link
+```
+
+```yaml
+# .github/workflows/docs-links.yml — thin caller of the reusable workflow
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  linkcheck:
+    uses: Platonenkov/mcp-tooling/.github/workflows/docs-links.yml@main
+```
+
 ## Reusable CI/CD workflows
 
 Two [reusable GitHub Actions workflows](https://docs.github.com/actions/using-workflows/reusing-workflows)

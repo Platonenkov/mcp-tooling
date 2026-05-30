@@ -1,0 +1,46 @@
+name: docs-links
+
+# Reusable workflow: markdown link integrity gate via the shared `Mcp.LinkCheck` dotnet tool.
+# Consumers call this from their own .github/workflows/docs-links.yml with:
+#
+#   uses: Platonenkov/mcp-tooling/.github/workflows/docs-links.yml@main
+#
+# Validates every `[text](path)` and `[text](path#anchor)` link in the repo's `.md` files
+# against the live filesystem (and GitHub-flavored heading slugs for anchors). External
+# https links are skipped by default; opt-in per-repo via `linkcheck.json:checkExternalLinks=true`.
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: 'dotnet SDK version to use.'
+        type: string
+        default: '10.0.x'
+
+permissions:
+  contents: read
+
+jobs:
+  linkcheck:
+    name: markdown link integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props', '.config/dotnet-tools.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: Run mcp-linkcheck
+        run: dotnet tool run mcp-linkcheck --check
