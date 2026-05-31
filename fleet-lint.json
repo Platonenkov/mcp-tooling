@@ -29,6 +29,14 @@
       "callbackPort": 8129,
       "repo": "StaticBit-io/XrplMeta.Mcp",
       "releaseModel": "shared"
+    },
+    {
+      "id": "fal-media-gen",
+      "scope": "fal-media-gen",
+      "host": "fal-media-gen-mcp.staticbit.io",
+      "callbackPort": 8130,
+      "repo": "Platonenkov/Fal.MediaGen.Mcp",
+      "releaseModel": "shared"
     }
   ],
   "allowedExtraHostnames": []
