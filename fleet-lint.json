@@ -1,31 +1,31 @@
 {
-  "authorizationServer": "auth.mcp.staticbit.io",
+  "authorizationServer": "auth.mcp.staticbit.ai",
   "mcps": [
     {
       "id": "xrpl",
       "scope": "xrpl",
-      "host": "xrpl-mcp.staticbit.io",
+      "host": "xrpl.mcp.staticbit.ai",
       "callbackPort": 8128,
       "repo": "StaticBit-io/staticbit-xrpl-mcp"
     },
     {
       "id": "x-mcp",
       "scope": "x-mcp",
-      "host": "x-mcp.staticbit.io",
+      "host": "x.mcp.staticbit.ai",
       "callbackPort": 8127,
       "repo": "Platonenkov/x-mcp"
     },
     {
       "id": "telegram-bot",
       "scope": "telegram-bot",
-      "host": "telegram-mcp.staticbit.io",
+      "host": "telegram.mcp.staticbit.ai",
       "callbackPort": 8126,
       "repo": "Platonenkov/telegram-mcp"
     },
     {
       "id": "xrplmeta",
       "scope": "xrplmeta",
-      "host": "xrpl-meta-mcp.staticbit.io",
+      "host": "xrplmeta.mcp.staticbit.ai",
       "callbackPort": 8129,
       "repo": "StaticBit-io/XrplMeta.Mcp",
       "releaseModel": "shared"
@@ -33,7 +33,7 @@
     {
       "id": "fal-media-gen",
       "scope": "fal-media-gen",
-      "host": "fal-media-gen-mcp.staticbit.io",
+      "host": "fal.mcp.staticbit.ai",
       "callbackPort": 8130,
       "repo": "Platonenkov/Fal.MediaGen.Mcp",
       "releaseModel": "shared"
