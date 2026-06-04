@@ -37,6 +37,13 @@
       "callbackPort": 8130,
       "repo": "Platonenkov/Fal.MediaGen.Mcp",
       "releaseModel": "shared"
+    },
+    {
+      "id": "xrpldata",
+      "scope": "xrpldata",
+      "host": "xrpldata.mcp.staticbit.ai",
+      "callbackPort": 8131,
+      "repo": "StaticBit-io/XrplData.Mcp"
     }
   ],
   "allowedExtraHostnames": []
