@@ -44,6 +44,13 @@
       "host": "xrpldata.mcp.staticbit.ai",
       "callbackPort": 8131,
       "repo": "StaticBit-io/XrplData.Mcp"
+    },
+    {
+      "id": "xrplto",
+      "scope": "xrplto",
+      "host": "xrplto.mcp.staticbit.ai",
+      "callbackPort": 8132,
+      "repo": "StaticBit-io/XrplTo.Mcp"
     }
   ],
   "allowedExtraHostnames": []
