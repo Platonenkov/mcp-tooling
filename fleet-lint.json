@@ -23,6 +23,13 @@
       "repo": "Platonenkov/telegram-mcp"
     },
     {
+      "id": "telegram-user",
+      "scope": "telegram-user",
+      "host": "telegram-user.mcp.staticbit.ai",
+      "callbackPort": 8133,
+      "repo": "Platonenkov/telegram-mcp"
+    },
+    {
       "id": "xrplmeta",
       "scope": "xrplmeta",
       "host": "xrplmeta.mcp.staticbit.ai",
