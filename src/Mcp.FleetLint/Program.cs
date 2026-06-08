@@ -65,13 +65,24 @@ public static class Program
             return 0;
         }
 
-        Console.Out.WriteLine($"fleet-lint: checking {identity} (scope={selfEntry.Scope}, host={selfEntry.Host}, callbackPort={selfEntry.CallbackPort}) against fleet of {config.Mcps.Count} MCP(s).");
+        // A single repo may host more than one fleet MCP (e.g. telegram-mcp ships both
+        // telegram-bot and telegram-user). selfEntry is the first match (used for the
+        // repo-level host/AS/release-model checks); selfEntries is the full set, used by the
+        // per-file scope/callbackPort checks so each appsettings/.mcp.json may match ANY of
+        // the repo's MCPs. For a single-MCP repo this set has one element and behaviour is
+        // identical to matching selfEntry directly.
+        List<McpEntry> selfEntries = config.Mcps
+            .Where(m => string.Equals(m.Repo, identity, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        string scopeList = string.Join(", ", selfEntries.Select(e => e.Scope));
+        Console.Out.WriteLine($"fleet-lint: checking {identity} (scopes=[{scopeList}], host={selfEntry.Host}, callbackPort={selfEntry.CallbackPort}) against fleet of {config.Mcps.Count} MCP(s).");
 
         List<string> errors = new();
 
         CheckHostnames(repoRoot, config, selfEntry, errors);
-        CheckCallbackPort(repoRoot, selfEntry, errors);
-        CheckOAuthScope(repoRoot, selfEntry, errors);
+        CheckCallbackPort(repoRoot, selfEntries, errors);
+        CheckOAuthScope(repoRoot, selfEntries, errors);
         CheckAuthServerHost(repoRoot, config, errors);
         CheckReleaseModel(repoRoot, selfEntry, errors);
 
@@ -135,7 +146,7 @@ public static class Program
     // Check 2: OAuth callback port in .mcp.json plugin manifests must equal the canonical
     // value for the repo. Detects accidental copy-paste collisions when adding a new plugin.
     // ---------------------------------------------------------------------------------------
-    private static void CheckCallbackPort(string repoRoot, McpEntry self, List<string> errors)
+    private static void CheckCallbackPort(string repoRoot, IReadOnlyList<McpEntry> selfEntries, List<string> errors)
     {
         foreach (string abs in Directory.EnumerateFiles(repoRoot, ".mcp.json", SearchOption.AllDirectories))
         {
@@ -153,8 +164,11 @@ public static class Program
                 if (!oauth.TryGetProperty("callbackPort", out JsonElement portEl)) continue;
                 if (portEl.ValueKind != JsonValueKind.Number) continue;
                 int port = portEl.GetInt32();
-                if (port != self.CallbackPort)
-                    errors.Add($"{rel}: oauth.callbackPort={port} but fleet inventory says {self.CallbackPort} for {self.Repo}");
+                if (!selfEntries.Any(e => port == e.CallbackPort))
+                {
+                    string allowed = string.Join(", ", selfEntries.Select(e => e.CallbackPort));
+                    errors.Add($"{rel}: oauth.callbackPort={port} but fleet inventory says [{allowed}] for {selfEntries[0].Repo}");
+                }
             }
         }
     }
@@ -163,7 +177,7 @@ public static class Program
     // Check 3: OAuth scope. Walks every appsettings*.json (the cloud server config) for the
     // OAuth section's RequiredScope; must match entry.scope.
     // ---------------------------------------------------------------------------------------
-    private static void CheckOAuthScope(string repoRoot, McpEntry self, List<string> errors)
+    private static void CheckOAuthScope(string repoRoot, IReadOnlyList<McpEntry> selfEntries, List<string> errors)
     {
         foreach (string abs in Directory.EnumerateFiles(repoRoot, "appsettings*.json", SearchOption.AllDirectories))
         {
@@ -182,8 +196,11 @@ public static class Program
                 if (!oauth.TryGetProperty("RequiredScope", out JsonElement scopeEl)) continue;
                 if (scopeEl.ValueKind != JsonValueKind.String) continue;
                 string scope = scopeEl.GetString() ?? "";
-                if (!string.Equals(scope, self.Scope, StringComparison.Ordinal))
-                    errors.Add($"{rel}: OAuth.RequiredScope=\"{scope}\" but fleet inventory says \"{self.Scope}\"");
+                if (!selfEntries.Any(e => string.Equals(scope, e.Scope, StringComparison.Ordinal)))
+                {
+                    string allowed = string.Join(", ", selfEntries.Select(e => e.Scope));
+                    errors.Add($"{rel}: OAuth.RequiredScope=\"{scope}\" but fleet inventory says [{allowed}] for {selfEntries[0].Repo}");
+                }
             }
         }
     }
