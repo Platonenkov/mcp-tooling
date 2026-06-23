@@ -213,6 +213,7 @@ public static class RoslynAnalyzer
             foreach (ReturnStatementSyntax ret in method.Body.DescendantNodes().OfType<ReturnStatementSyntax>())
             {
                 if (ret.Expression is null) continue; // `return;` in non-task void — irrelevant for guard
+                if (IsInsideNestedFunction(ret, method)) continue; // belongs to a nested lambda / local function, not the tool method
                 bool insideCatch = ret.Ancestors().OfType<CatchClauseSyntax>().Any();
                 returns.Add((ret.Expression, LineOf(tree, ret.SpanStart), insideCatch));
             }
@@ -254,6 +255,24 @@ public static class RoslynAnalyzer
 
         bool everyReturnIsWrapped = totalConsidered > 0 && unwrappedLines.Count == 0;
         return new ReturnAuditResult(unwrappedLines.ToArray(), everyReturnIsWrapped);
+    }
+
+    /// <summary>
+    /// True when <paramref name="ret"/> belongs to a nested lambda or local function rather than
+    /// <paramref name="method"/> itself. Such a <c>return</c> is the inner function's return value,
+    /// not the tool method's — the method's own return (which consumes it) is audited separately.
+    /// Without this, a tool that builds its result inside an
+    /// <c>ExecuteAsync(async () =&gt; { return …; })</c> lambda is falsely flagged even though its
+    /// real (method-level) returns wrap correctly.
+    /// </summary>
+    private static bool IsInsideNestedFunction(SyntaxNode ret, MethodDeclarationSyntax method)
+    {
+        foreach (SyntaxNode ancestor in ret.Ancestors())
+        {
+            if (ancestor == method) return false;
+            if (ancestor is AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax) return true;
+        }
+        return false;
     }
 
     /// <summary>

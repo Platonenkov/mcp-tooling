@@ -20,9 +20,10 @@ namespace Mcp.InjectionGuard;
 ///      <c>*.ExecuteAsync</c>, …) — both sets extensible via <c>injectionguard.json</c>.
 ///
 /// Per return statement we accept: <c>throw</c>, <c>null</c>, constant literals, returns
-/// inside a <c>catch</c> block, and returns that root in a method parameter. Everything
-/// else must syntactically descend into a wrap invocation — directly, via a wrapped local,
-/// a wrapped object initializer, a wrapped ternary, or a wrapped null-coalesce.
+/// inside a <c>catch</c> block, returns nested in a lambda / local function (they belong to
+/// the inner function, not the tool method), and returns that root in a method parameter.
+/// Everything else must syntactically descend into a wrap invocation — directly, via a wrapped
+/// local, a wrapped object initializer, a wrapped ternary, or a wrapped null-coalesce.
 ///
 /// Options:
 ///   <c>--check</c>                 CI mode: exit non-zero on any error.
