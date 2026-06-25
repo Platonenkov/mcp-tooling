@@ -312,6 +312,34 @@ jobs:
     uses: Platonenkov/mcp-tooling/.github/workflows/injection-guard.yml@main
 ```
 
+## `security-audit` — гейт безопасности Actions (zizmor + actionlint)
+
+Бестулзовый переиспользуемый workflow, который статически аудитит собственные `.github/workflows/`
+репозитория на класс **pwn-request / Actions-injection / supply-chain** (семейство "untrusted input"
+от GitHub Security Lab): незапиненные сторонние actions, инъекция `github.event.*` в шаблоны, опасные
+триггеры, избыточные permissions. Запускает [zizmor](https://github.com/zizmorcore/zizmor)
+(`--min-severity high`, заточен под этот класс) и [actionlint](https://github.com/rhysd/actionlint).
+
+Канон политики — `.github/zizmor.yml`, копируется дословно в каждый репо (та же модель, что
+`fleet-lint.json`): GitHub-owned (`actions/*`, `github/*`) и свои reusable (`Platonenkov/mcp-tooling/*`)
+можно пинить на тег/ref; любой сторонний action обязан быть запинен на полный commit-SHA. `shellcheck`
+намеренно отключён (`actionlint -shellcheck=`) — он флагает пред­существующие стилевые ниты в
+`run:`-блоках, которые вне scope гейта безопасности Actions. Сторонние actions запинены на SHA и
+обновляются конфигом Dependabot `github-actions`.
+
+```yaml
+# .github/workflows/security-audit.yml — thin caller of the reusable workflow
+on:
+  workflow_dispatch:
+  pull_request: { paths: ['.github/workflows/**', '.github/zizmor.yml'] }
+  push: { branches: [main], paths: ['.github/workflows/**', '.github/zizmor.yml'] }
+permissions: { contents: read }
+jobs:
+  audit:
+    permissions: { contents: read }
+    uses: Platonenkov/mcp-tooling/.github/workflows/security-audit.yml@main
+```
+
 ## Переиспользуемые CI/CD workflow
 
 Два [переиспользуемых GitHub Actions workflow](https://docs.github.com/actions/using-workflows/reusing-workflows)

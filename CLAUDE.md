@@ -46,7 +46,7 @@ specifics in docs/examples; use generic placeholders (`my-mcp`, `src/MyMcp.Serve
   the syntactic call, so it works regardless of whether the helper type is reachable at parse
   time. Repos with no matching files pass clean.
 
-It also hosts six **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
+It also hosts seven **reusable GitHub Actions workflows** (`.github/workflows/`), referenced by
 consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
 - **`docker-build-push.yml`** — build + push multi-arch ghcr.io images from a JSON image matrix
   (optional `github_token` build-secret for private GH Packages restore).
@@ -64,6 +64,10 @@ consumers as `uses: <owner>/mcp-tooling/.github/workflows/<file>@main`:
   `mcp-injectionguard --check`). Same 3-line caller pattern. Asserts every external-content-
   returning tool wraps through `UntrustedContent.Wrap` / `UntrustedContent.WrapJson` before
   reaching the MCP client.
+- **`security-audit.yml`** — zizmor (`--min-severity high`) + actionlint gate for the
+  pwn-request / Actions-injection / supply-chain class. Canonical policy is each repo's
+  `.github/zizmor.yml` (GitHub-owned + own reusables ref-pin, third-party hash-pin); `shellcheck`
+  off. Thin caller also exposes `workflow_dispatch` for a manual re-audit.
 
 ## Documentation — bilingual, enforced by CI
 
