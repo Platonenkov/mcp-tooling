@@ -1,0 +1,15 @@
+# Canonical fleet zizmor policy — static security audit of GitHub Actions workflows.
+# This file is the canon: it is copied verbatim into every MCP repo (same model as
+# fleet-lint.json). Edit it here first, then propagate. https://docs.zizmor.sh/configuration/
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # First-party, GitHub-owned actions may be pinned to a tag / major ref.
+        actions/*: ref-pin
+        github/*: ref-pin
+        # Our own org-owned reusable workflows are trusted (mcp-tooling main is branch-protected),
+        # so they may track a branch/tag ref — the fleet auto-picks up gate fixes without re-pinning.
+        Platonenkov/mcp-tooling/*: ref-pin
+        # Every third-party action must be pinned to a full commit SHA.
+        "*": hash-pin

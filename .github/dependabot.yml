@@ -1,0 +1,17 @@
+version: 2
+
+# Keeps SHA-pinned GitHub Actions current: Dependabot bumps the pinned commit (and rewrites
+# the `# vX` comment) when a new release lands, so pinning never means stale/vulnerable actions.
+# All action bumps are grouped into a single weekly PR to keep the noise down.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: chore

@@ -1,0 +1,63 @@
+name: security-audit
+
+# Static security audit of GitHub Actions workflows — the "pwn request" / Actions-injection
+# / supply-chain class (cf. GitHub Security Lab "untrusted input", novee "cordyceps"). Runs
+# zizmor (purpose-built for this class) + actionlint. Reusable across the fleet; the canonical
+# zizmor policy lives in .github/zizmor.yml (copied verbatim into every repo, same model as
+# fleet-lint.json). Consumers call this from their own thin .github/workflows/security-audit.yml:
+#
+#   uses: Platonenkov/mcp-tooling/.github/workflows/security-audit.yml@main
+#
+# The pull_request / push triggers below also self-gate mcp-tooling itself.
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/zizmor.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/zizmor.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  zizmor:
+    name: zizmor — Actions security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install zizmor
+        run: python -m pip install --disable-pip-version-check zizmor==1.26.1
+
+      # Offline audit (no token required, so this also works on fork PRs). Fails only on
+      # high-severity findings: unpinned third-party actions, github.event.* template
+      # injection, dangerous triggers (pull_request_target + PR-head checkout), etc.
+      # Medium/low hardening hints (excessive-permissions, artipacked) are reported as
+      # annotations but do not fail the gate.
+      - name: Run zizmor
+        run: zizmor --min-severity high --no-progress .github/workflows/
+
+  actionlint:
+    name: actionlint — workflow lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          curl -fsSL -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          tar -xzf actionlint.tar.gz actionlint
+          ./actionlint -color
