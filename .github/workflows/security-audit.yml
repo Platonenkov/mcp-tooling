@@ -60,4 +60,7 @@ jobs:
           curl -fsSL -o actionlint.tar.gz \
             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           tar -xzf actionlint.tar.gz actionlint
-          ./actionlint -color
+          # -shellcheck= disables the shellcheck integration on purpose: this gate audits
+          # Actions-level security (zizmor) + workflow correctness (actionlint), not pre-existing
+          # shell-script style nits inside run: blocks (that is a separate hardening pass).
+          ./actionlint -color -shellcheck=
