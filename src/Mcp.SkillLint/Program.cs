@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using YamlDotNet.Core;
+using YamlDotNet.Serialization;
 
 namespace Mcp.SkillLint;
 
@@ -40,35 +42,51 @@ public static class Program
 
         SkillLintConfig config = LoadConfig(repoRoot, configPath);
 
-        List<SkillFile> skills = DiscoverSkills(repoRoot, config);
-        if (skills.Count == 0)
+        List<SkillPath> files = EnumerateSkillFiles(repoRoot, config);
+        if (files.Count == 0)
         {
             Console.Out.WriteLine($"OK: skill-lint — no SKILL.md files found under {ToForward(Path.GetRelativePath(Directory.GetCurrentDirectory(), repoRoot))}/plugins; nothing to check.");
             return 0;
         }
 
-        int pluginCount = skills.Select(s => s.PluginName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-        Console.Out.WriteLine($"INFO: scanned {skills.Count} SKILL.md file(s) across {pluginCount} plugin(s).");
+        int pluginCount = files.Select(f => f.PluginName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        Console.Out.WriteLine($"INFO: scanned {files.Count} SKILL.md file(s) across {pluginCount} plugin(s).");
 
+        // Pass 1 — frontmatter validity. Every SKILL.md must have a leading `---`...`---` block that
+        // parses as YAML with a non-empty `name` + `description`. A malformed frontmatter (e.g. an
+        // unquoted `description:` whose value contains a colon-space, which YAML reads as a nested
+        // mapping) loads the skill with EMPTY metadata — name/description/triggers silently dropped.
+        // This is a hard error, independent of trigger overlap.
+        List<string> frontmatterErrors = ValidateFrontmatter(files);
+
+        // Pass 2 — cross-plugin trigger overlap, over the files whose description we could read.
+        List<SkillFile> skills = new();
+        foreach (SkillPath f in files)
+        {
+            SkillFile? parsed = ParseSkillFile(f.AbsolutePath, repoRoot, f.PluginName, f.SkillName);
+            if (parsed is not null) skills.Add(parsed);
+        }
         List<string> conflicts = FindConflicts(skills, config);
         List<string> nearOverlaps = FindNearOverlaps(skills, config);
 
+        foreach (string err in frontmatterErrors) Console.Error.WriteLine($"::error::{err}");
         foreach (string err in conflicts) Console.Error.WriteLine($"::error::{err}");
         foreach (string warn in nearOverlaps) Console.Error.WriteLine($"::warning::{warn}");
 
-        if (conflicts.Count == 0 && nearOverlaps.Count == 0)
+        int hardErrors = frontmatterErrors.Count + conflicts.Count;
+        if (hardErrors == 0 && nearOverlaps.Count == 0)
         {
-            Console.Out.WriteLine("OK: skill triggers consistent.");
+            Console.Out.WriteLine("OK: skill frontmatter valid; triggers consistent.");
             return 0;
         }
 
-        if (conflicts.Count == 0)
+        if (hardErrors == 0)
         {
-            Console.Out.WriteLine($"OK: skill triggers consistent ({nearOverlaps.Count} near-overlap warning(s) — review but not blocking).");
+            Console.Out.WriteLine($"OK: skill frontmatter valid; triggers consistent ({nearOverlaps.Count} near-overlap warning(s) — review but not blocking).");
             return 0;
         }
 
-        Console.Error.WriteLine($"FAIL: {conflicts.Count} conflict(s), {nearOverlaps.Count} near-overlap(s).");
+        Console.Error.WriteLine($"FAIL: {frontmatterErrors.Count} frontmatter error(s), {conflicts.Count} conflict(s), {nearOverlaps.Count} near-overlap(s).");
         return check ? 1 : 0;
     }
 
@@ -81,9 +99,9 @@ public static class Program
     /// plugin and skill names are derived from path segments; this is the convention used
     /// across the fleet (telegram-mcp, staticbit-xrpl-mcp, x-mcp, XrplMeta.Mcp).
     /// </summary>
-    private static List<SkillFile> DiscoverSkills(string repoRoot, SkillLintConfig config)
+    private static List<SkillPath> EnumerateSkillFiles(string repoRoot, SkillLintConfig config)
     {
-        List<SkillFile> result = new();
+        List<SkillPath> result = new();
         string pluginsRoot = Path.Combine(repoRoot, "plugins");
         if (!Directory.Exists(pluginsRoot)) return result;
 
@@ -99,14 +117,62 @@ public static class Program
             if (!parts[2].Equals("skills", StringComparison.OrdinalIgnoreCase)) continue;
 
             string pluginName = parts[1];
-            string skillName = parts[3];
             if (excludePlugins.Contains(pluginName)) continue;
 
-            SkillFile? parsed = ParseSkillFile(skillMd, repoRoot, pluginName, skillName);
-            if (parsed is not null) result.Add(parsed);
+            result.Add(new SkillPath(skillMd, rel, pluginName, parts[3]));
         }
 
         return result;
+    }
+
+    private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder().Build();
+
+    /// <summary>
+    /// Frontmatter-validity pass: every SKILL.md must open with a <c>---</c>…<c>---</c> block that
+    /// parses as a YAML mapping carrying a non-empty <c>name</c> and <c>description</c>. Returns one
+    /// error string per offending file (empty = all valid). This mirrors what <c>claude plugin
+    /// validate</c> enforces — a broken frontmatter makes the skill load with empty metadata.
+    /// </summary>
+    private static List<string> ValidateFrontmatter(List<SkillPath> files)
+    {
+        List<string> errors = new();
+        foreach (SkillPath f in files)
+        {
+            string text = File.ReadAllText(f.AbsolutePath, Encoding.UTF8);
+            Match fm = FrontmatterRegex.Match(text);
+            if (!fm.Success)
+            {
+                errors.Add($"{f.RelativePath}:1 missing or unterminated YAML frontmatter (--- ... ---)");
+                continue;
+            }
+
+            object? root;
+            try
+            {
+                root = YamlDeserializer.Deserialize<object?>(fm.Groups["body"].Value);
+            }
+            catch (YamlException ex)
+            {
+                string detail = string.Join(" ", (ex.Message ?? "parse error").Split('\n', '\r')).Trim();
+                errors.Add($"{f.RelativePath} invalid YAML frontmatter — {detail} (skill would load with empty metadata)");
+                continue;
+            }
+
+            if (root is not IDictionary<object, object> map)
+            {
+                errors.Add($"{f.RelativePath} frontmatter is not a YAML mapping");
+                continue;
+            }
+
+            foreach (string key in new[] { "name", "description" })
+            {
+                map.TryGetValue(key, out object? value);
+                if (value is not string s || string.IsNullOrWhiteSpace(s))
+                    errors.Add($"{f.RelativePath} frontmatter '{key}' is missing or empty");
+            }
+        }
+
+        return errors;
     }
 
     private static readonly Regex FrontmatterRegex = new(
@@ -346,6 +412,8 @@ public static class Program
         return null;
     }
 }
+
+internal sealed record SkillPath(string AbsolutePath, string RelativePath, string PluginName, string SkillName);
 
 internal sealed record SkillFile(
     string RelativePath,
