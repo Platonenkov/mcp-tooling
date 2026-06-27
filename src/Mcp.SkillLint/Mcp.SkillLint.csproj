@@ -11,11 +11,11 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>mcp-skilllint</ToolCommandName>
     <PackageId>Mcp.SkillLint</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>StaticBit</Authors>
     <Company>StaticBit</Company>
     <Copyright>Copyright (c) 2026 StaticBit</Copyright>
-    <Description>Cross-plugin SKILL.md trigger-keyword overlap detector for the MCP fleet: parses every plugins/&lt;plugin&gt;/skills/&lt;skill&gt;/SKILL.md, extracts the quoted trigger phrases from the YAML-frontmatter description, and flags identical triggers reused across plugins (conflicts) plus near-duplicates within Levenshtein distance 2 (warnings). Optional skilllint.json whitelist for intentional sharing. Prevents the wrong-plugin-loads-for-the-query bug in cloud-vs-local plugin pairs.</Description>
+    <Description>Cross-plugin SKILL.md linter for the MCP fleet: (1) strictly parses each plugins/&lt;plugin&gt;/skills/&lt;skill&gt;/SKILL.md YAML frontmatter and fails on invalid YAML or a missing name/description (a malformed frontmatter makes the skill load with empty metadata — triggers silently dropped); (2) extracts the quoted trigger phrases from the frontmatter description and flags identical triggers reused across plugins (conflicts) plus near-duplicates within Levenshtein distance 2 (warnings). Optional skilllint.json whitelist for intentional sharing. Prevents both the empty-metadata bug and the wrong-plugin-loads-for-the-query bug in cloud-vs-local plugin pairs.</Description>
     <PackageTags>mcp;ci;skill;triggers;dotnet-tool;plugins</PackageTags>
     <!-- See sibling Mcp.ToolsDoc.csproj for why the host repo is on a personal account. -->
     <RepositoryUrl>https://github.com/Platonenkov/mcp-tooling</RepositoryUrl>
@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.37.0" />
+    <PackageReference Include="YamlDotNet" Version="13.7.1" />
   </ItemGroup>
 
 </Project>
