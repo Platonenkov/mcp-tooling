@@ -52,7 +52,7 @@ jobs:
       matrix:
         image: ${{ fromJSON(inputs.images) }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # ghcr.io rejects uppercase letters in the image path, but
       # github.repository_owner preserves casing (e.g. "StaticBit-io"), so
