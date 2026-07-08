@@ -58,6 +58,14 @@
       "host": "xrplto.mcp.staticbit.ai",
       "callbackPort": 8132,
       "repo": "StaticBit-io/XrplTo.Mcp"
+    },
+    {
+      "id": "media",
+      "scope": "media",
+      "host": "media.mcp.staticbit.ai",
+      "callbackPort": 8134,
+      "repo": "Platonenkov/media-mcp",
+      "releaseModel": "shared"
     }
   ],
   "allowedExtraHostnames": []
